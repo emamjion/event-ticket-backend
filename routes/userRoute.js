@@ -1,8 +1,7 @@
 import express from "express";
 import {
   checkAdmin,
-  deleteUser,
-  getAllUsers,
+  getPurchasedTickets,
   makeUserAdmin,
 } from "../controllers/userController.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
@@ -10,10 +9,9 @@ import verifyToken from "../middleware/verifyToken.js";
 
 const userRouter = express.Router();
 
-// get all routes
-userRouter.get("/users", verifyToken, verifyAdmin, getAllUsers);
-// delete user by specific Id
-userRouter.delete("/users/:id", verifyToken, verifyAdmin, deleteUser);
+// get purchased ticket route
+userRouter.get("/purchased-tickets", verifyToken, getPurchasedTickets);
+
 // Make admin route
 userRouter.patch(
   "/users/:id/make-admin",

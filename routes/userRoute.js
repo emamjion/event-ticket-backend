@@ -1,6 +1,7 @@
 import express from "express";
 import {
   checkAdmin,
+  downloadTickets,
   getPurchasedTickets,
   makeUserAdmin,
 } from "../controllers/userController.js";
@@ -11,6 +12,8 @@ const userRouter = express.Router();
 
 // get purchased ticket route
 userRouter.get("/purchased-tickets", verifyToken, getPurchasedTickets);
+// download ticket with pdf
+userRouter.get("/download-tickets", verifyToken, downloadTickets);
 
 // Make admin route
 userRouter.patch(

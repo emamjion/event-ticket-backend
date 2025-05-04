@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import connectCloudinary from "./config/cloudinary.js";
 import connectDB from "./config/mongodb.js";
+import adminRouter from "./routes/adminRoute.js";
 import authRouter from "./routes/authRoute.js";
 import ticketRouter from "./routes/ticketRoute.js";
 import userRouter from "./routes/userRoute.js";
@@ -25,6 +26,8 @@ app.use("/api/v1/ticket", ticketRouter);
 app.use("/api/v1/auth", authRouter);
 // user routes
 app.use("/api/v1/user", userRouter);
+// admin router
+app.use("/api/v1/admin", adminRouter);
 
 // JWT route (optional)
 // app.use("/api", jwtRouter);

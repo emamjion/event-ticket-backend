@@ -26,6 +26,10 @@ const ticketSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    isPublished: {
+      type: Boolean,
+      default: false,
+    },
     ticketsAvailable: {
       type: Number,
       required: true,
@@ -36,5 +40,6 @@ const ticketSchema = new mongoose.Schema(
   }
 );
 
-const TicketModel = mongoose.models.Ticket || mongoose.model("Ticket", ticketSchema);
+const TicketModel =
+  mongoose.models.Ticket || mongoose.model("Ticket", ticketSchema);
 export default TicketModel;

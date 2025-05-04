@@ -85,7 +85,6 @@ const loginUser = async (req, res) => {
       email: user.email,
       name: user.name,
     });
-    console.log("user : ", user);
 
     res.status(200).json({
       success: true,

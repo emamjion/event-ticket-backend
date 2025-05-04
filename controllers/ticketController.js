@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import TicketModel from "../models/ticketModel.js";
+import UserModel from "../models/userModel.js";
 
 // function for get all tickets
 const getTickets = async (req, res) => {
@@ -48,7 +49,6 @@ const getTicketById = async (req, res) => {
 // Create New Ticket
 const createTicket = async (req, res) => {
   try {
-    console.log("req.body: ", req.body);
     const { title, description, time, location, price, ticketsAvailable } =
       req.body;
     const image = req.file;
@@ -144,4 +144,58 @@ const deleteTicket = async (req, res) => {
   }
 };
 
-export { createTicket, deleteTicket, getTicketById, getTickets, updateTicket };
+// Purchase ticket
+const purchaseTicket = async (req, res) => {
+  try {
+    const { userId, ticketId } = req.body;
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const ticket = await TicketModel.findById(ticketId);
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    user.purchasedTickets.push({
+      ticketId: ticket._id,
+      name: ticket.name,
+      price: ticket.price,
+      date: new Date(),
+    });
+
+    // If user role is still 'user', then make it 'buyer'
+    if (!user.role || user.role === "user") {
+      user.role = "buyer";
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Ticket purchased & user role updated to buyer",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to purchase ticket",
+      error: error.message,
+    });
+  }
+};
+
+export {
+  createTicket,
+  deleteTicket,
+  getTicketById,
+  getTickets,
+  purchaseTicket,
+  updateTicket,
+};

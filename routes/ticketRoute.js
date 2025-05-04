@@ -1,9 +1,15 @@
 import express from "express";
 import {
+  getPublishedTicketById,
+  getPublishedTickets,
+} from "../controllers/publishTicketController.js";
+import { guestPurchaseTicket } from "../controllers/purchaseTicketController.js";
+import {
   createTicket,
   deleteTicket,
   getTicketById,
   getTickets,
+  purchaseTicket,
   updateTicket,
 } from "../controllers/ticketController.js";
 import upload from "../middleware/multer.js";
@@ -29,4 +35,12 @@ ticketRouter.patch("/tickets/:id", verifyToken, verifyAdmin, updateTicket);
 // Delete Ticket
 ticketRouter.delete("/tickets/:id", verifyToken, verifyAdmin, deleteTicket);
 
+// Purchase ticket routes
+ticketRouter.post("/purchase-ticket", verifyToken, purchaseTicket);
+// guest purchase ticket route
+ticketRouter.post("/guest-purchase", guestPurchaseTicket);
+// public ticket route
+ticketRouter.get("/published-tickets", getPublishedTickets);
+// published ticket details route
+ticketRouter.get("/published-ticket/:id", getPublishedTicketById);
 export default ticketRouter;

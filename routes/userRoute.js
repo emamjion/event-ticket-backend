@@ -1,6 +1,7 @@
 import express from "express";
-import { getPurchasedTicketDetails } from "../controllers/purchaseTicketController.js";
 import {
+  buySingleTicketDetails,
+  buyTicket,
   checkAdmin,
   downloadTickets,
   getPurchasedTickets,
@@ -11,14 +12,13 @@ import verifyToken from "../middleware/verifyToken.js";
 
 const userRouter = express.Router();
 
+// buy ticket route
+userRouter.post("/buy-ticket", verifyToken, buyTicket);
+// single buy ticket details route
+userRouter.get("/buy-ticket/:ticketId", verifyToken, buySingleTicketDetails);
+
 // get purchased ticket route
 userRouter.get("/purchased-tickets", verifyToken, getPurchasedTickets);
-// get purchased ticket details route
-userRouter.get(
-  "/purchased-tickets/:id",
-  verifyToken,
-  getPurchasedTicketDetails
-);
 // download ticket with pdf
 userRouter.get("/download-tickets", verifyToken, downloadTickets);
 

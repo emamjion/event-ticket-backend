@@ -145,51 +145,66 @@ const deleteTicket = async (req, res) => {
 };
 
 // Purchase ticket
-const purchaseTicket = async (req, res) => {
-  try {
-    const { userId, ticketId } = req.body;
+// const purchaseTicket = async (req, res) => {
+//   try {
+//     const { userId, ticketId } = req.body;
 
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
+//     const user = await UserModel.findById(userId);
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "User not found" });
+//     }
 
-    const ticket = await TicketModel.findById(ticketId);
-    if (!ticket) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Ticket not found" });
-    }
+//     const ticket = await TicketModel.findById(ticketId);
+//     if (!ticket) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Ticket not found" });
+//     }
 
-    user.purchasedTickets.push({
-      ticketId: ticket._id,
-      title: ticket.title,
-      price: ticket.price,
-      date: new Date(),
-    });
+//     // Check if user already purchased this ticket
+//     const alreadyPurchased = user.purchasedTickets.some(
+//       (t) => t.ticketId.toString() === ticketId
+//     );
 
-    // If user role is still 'user', then make it 'buyer'
-    if (!user.role || user.role === "user") {
-      user.role = "buyer";
-    }
+//     if (alreadyPurchased) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "You have already purchased this ticket.",
+//       });
+//     }
 
-    await user.save();
+//     // Add ticket to purchased list
+//     user.purchasedTickets.push({
+//       ticketId: ticket._id,
+//       title: ticket.title,
+//       price: ticket.price,
+//       date: new Date(),
+//     });
 
-    res.status(200).json({
-      success: true,
-      message: "Ticket purchased & user role updated to buyer",
-      data: user,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to purchase ticket",
-      error: error.message,
-    });
-  }
-};
+//     // Update role to 'buyer' if still 'user'
+//     if (!user.role || user.role === "user") {
+//       user.role = "buyer";
+//     }
+
+//     await user.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Ticket purchased & user role updated to buyer",
+//       data: user,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to purchase ticket",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
 
 /*
 
@@ -251,6 +266,6 @@ export {
   deleteTicket,
   getTicketById,
   getTickets,
-  purchaseTicket,
+  // purchaseTicket,
   updateTicket,
 };

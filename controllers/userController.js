@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import TicketModel from "../models/ticketModel.js";
 import UserModel from "../models/userModel.js";
 
 // Make User to Admin
@@ -90,6 +91,116 @@ const getPurchasedTickets = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// buy ticket
+const buyTicket = async (req, res) => {
+  try {
+    const { userId, ticketId } = req.body;
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const ticket = await TicketModel.findById(ticketId);
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found" });
+    }
+
+    // Check if already purchased
+    const alreadyPurchased = user.purchasedTickets.some(
+      (t) => t.ticketId.toString() === ticketId
+    );
+
+    if (alreadyPurchased) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already buy this ticket.",
+      });
+    }
+
+    // Push ticket into user's purchase list
+    user.purchasedTickets.push({
+      ticketId: ticket._id,
+      title: ticket.title,
+      price: ticket.price,
+      date: new Date(),
+    });
+
+    // Only update role IF current role is 'user'
+    if (user.role === "user") {
+      user.role = "buyer";
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Ticket bought successfully",
+      data: {
+        _id,
+        name,
+        email,
+        role,
+        purchasedTickets,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to buy ticket",
+      error: error.message,
+    });
+  }
+};
+
+// function for single buy ticket details
+const buySingleTicketDetails = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const ticketId = req.params.ticketId;
+
+    const user = await UserModel.findById(userId).populate({
+      path: "purchasedTickets.ticketId",
+      model: "Ticket",
+      select: "title date time location price image description",
+    });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // Find the ticket in user's purchased list
+    const purchasedTicket = user.purchasedTickets.find(
+      (t) => t.ticketId && t.ticketId._id.toString() === ticketId
+    );
+
+    if (!purchasedTicket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found in your purchase history",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${purchasedTicket.title} details fetched successfully `,
+      ticket: purchasedTicket.ticketId,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
@@ -205,4 +316,11 @@ const downloadTickets = async (req, res) => {
     res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
-export { checkAdmin, downloadTickets, getPurchasedTickets, makeUserAdmin };
+export {
+  buySingleTicketDetails,
+  buyTicket,
+  checkAdmin,
+  downloadTickets,
+  getPurchasedTickets,
+  makeUserAdmin,
+};

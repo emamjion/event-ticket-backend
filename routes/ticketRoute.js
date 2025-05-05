@@ -5,11 +5,12 @@ import {
 } from "../controllers/publishTicketController.js";
 import { guestPurchaseTicket } from "../controllers/purchaseTicketController.js";
 import {
+  // buyTicket,
   createTicket,
   deleteTicket,
   getTicketById,
   getTickets,
-  purchaseTicket,
+  // purchaseTicket,
   updateTicket,
 } from "../controllers/ticketController.js";
 import upload from "../middleware/multer.js";
@@ -36,7 +37,8 @@ ticketRouter.patch("/tickets/:id", verifyToken, verifyAdmin, updateTicket);
 ticketRouter.delete("/tickets/:id", verifyToken, verifyAdmin, deleteTicket);
 
 // Purchase ticket routes
-ticketRouter.post("/purchase-ticket", verifyToken, purchaseTicket);
+// ticketRouter.post("/purchase-ticket", verifyToken, purchaseTicket);
+// ticketRouter.post("/buy-ticket", verifyToken, buyTicket);
 
 // guest purchase ticket route
 ticketRouter.post("/guest-purchase", guestPurchaseTicket);

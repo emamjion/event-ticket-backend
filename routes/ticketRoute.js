@@ -37,6 +37,7 @@ ticketRouter.delete("/tickets/:id", verifyToken, verifyAdmin, deleteTicket);
 
 // Purchase ticket routes
 ticketRouter.post("/purchase-ticket", verifyToken, purchaseTicket);
+
 // guest purchase ticket route
 ticketRouter.post("/guest-purchase", guestPurchaseTicket);
 // public ticket route

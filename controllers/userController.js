@@ -83,6 +83,7 @@ const getPurchasedTickets = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: "Purchased ticket fetched successfully",
       purchasedTickets: user.purchasedTickets,
     });
   } catch (error) {

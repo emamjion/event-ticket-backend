@@ -165,7 +165,7 @@ const purchaseTicket = async (req, res) => {
 
     user.purchasedTickets.push({
       ticketId: ticket._id,
-      name: ticket.name,
+      title: ticket.title,
       price: ticket.price,
       date: new Date(),
     });
@@ -190,6 +190,61 @@ const purchaseTicket = async (req, res) => {
     });
   }
 };
+
+/*
+
+Purchase ticket - Advanced
+
+const purchaseTicket = async (req, res) => {
+  try {
+    const { userId, ticketId } = req.body;
+
+    // Ticket info find
+    const ticket = await Ticket.findById(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: 'Ticket not found' });
+    }
+
+    // Ticket Info থেকে relevant data push করা হচ্ছে
+    const purchasedTicketData = {
+      ticketId: ticket._id,
+      title: ticket.title,
+      description: ticket.description,
+      image: ticket.image,
+      price: ticket.price,
+      date: ticket.date,
+      time: ticket.time,
+      location: ticket.location,
+    };
+
+    // User update
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $push: { purchasedTickets: purchasedTicketData },
+        role: 'buyer', // role update
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Ticket purchased successfully and role updated to buyer',
+      purchasedTicket: purchasedTicketData,
+    });
+  } catch (error) {
+    console.error('Ticket purchase error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+
+
+*/
 
 export {
   createTicket,

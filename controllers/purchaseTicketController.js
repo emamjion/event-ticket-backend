@@ -25,7 +25,7 @@ const guestPurchaseTicket = async (req, res) => {
         name,
         email,
         password: hashedPassword,
-        role: "buyer", // default role for this case
+        role: "buyer",
         purchasedTickets: [
           {
             ticketId: ticket._id,
@@ -78,4 +78,36 @@ const guestPurchaseTicket = async (req, res) => {
   }
 };
 
-export { guestPurchaseTicket };
+// function for get purchased ticket details
+const getPurchasedTicketDetails = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const user = await UserModel.findById(id).populate({
+      path: "purchasedTickets.ticketId",
+      model: "Ticket",
+      select: "title date time location price",
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Purchased ticket details fetched successfully",
+      tickets: user.purchasedTickets,
+    });
+  } catch (error) {
+    console.error("Error fetching ticket details:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
+
+export { getPurchasedTicketDetails, guestPurchaseTicket };

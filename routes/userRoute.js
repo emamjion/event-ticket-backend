@@ -1,4 +1,5 @@
 import express from "express";
+import { getPurchasedTicketDetails } from "../controllers/purchaseTicketController.js";
 import {
   checkAdmin,
   downloadTickets,
@@ -12,6 +13,12 @@ const userRouter = express.Router();
 
 // get purchased ticket route
 userRouter.get("/purchased-tickets", verifyToken, getPurchasedTickets);
+// get purchased ticket details route
+userRouter.get(
+  "/purchased-tickets/:id",
+  verifyToken,
+  getPurchasedTicketDetails
+);
 // download ticket with pdf
 userRouter.get("/download-tickets", verifyToken, downloadTickets);
 

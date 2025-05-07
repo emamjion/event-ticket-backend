@@ -5,6 +5,7 @@ import connectCloudinary from "./config/cloudinary.js";
 import connectDB from "./config/mongodb.js";
 import adminRouter from "./routes/adminRoute.js";
 import authRouter from "./routes/authRoute.js";
+import paymentRouter from "./routes/paymentRoute.js";
 import ticketRouter from "./routes/ticketRoute.js";
 import userRouter from "./routes/userRoute.js";
 // import jwtRouter from "./routes/jwtRoute.js";
@@ -28,6 +29,8 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/user", userRouter);
 // admin router
 app.use("/api/v1/admin", adminRouter);
+// payment router
+app.use("/api/v1/payments", paymentRouter);
 
 // JWT route (optional)
 // app.use("/api", jwtRouter);

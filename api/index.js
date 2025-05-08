@@ -5,6 +5,7 @@ import connectCloudinary from "../config/cloudinary.js";
 import connectDB from "../config/mongodb.js";
 import adminRouter from "../routes/adminRoute.js";
 import authRouter from "../routes/authRoute.js";
+import orderRouter from "../routes/orderRoute.js";
 import paymentRouter from "../routes/paymentRoute.js";
 import ticketRouter from "../routes/ticketRoute.js";
 import userRouter from "../routes/userRoute.js";
@@ -25,6 +26,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/payments", paymentRouter);
+app.use("/api/v1/orders", orderRouter);
 
 // Root route
 app.get("/", (req, res) => {

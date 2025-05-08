@@ -3,6 +3,7 @@ import {
   addNewUserByAdmin,
   blockUserById,
   deleteUser,
+  getAllSoldTickets,
   getAllUsers,
   unblockUserById,
   updateUserRole,
@@ -35,5 +36,7 @@ adminRouter.put("/block-user/:id", verifyToken, verifyAdmin, blockUserById);
 
 // Unblock user
 adminRouter.put("/unblock-user/:id", verifyToken, verifyAdmin, unblockUserById);
+// get all sold tickets
+adminRouter.get("/sold-tickets", verifyToken, verifyAdmin, getAllSoldTickets);
 
 export default adminRouter;

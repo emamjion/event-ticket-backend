@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import OrderModel from "../models/orderModel.js";
 import UserModel from "../models/userModel.js";
 
 // add new user by admin panel
@@ -207,10 +208,32 @@ const unblockUserById = async (req, res) => {
   }
 };
 
+// function to get all sold tickets
+const getAllSoldTickets = async (req, res) => {
+  try {
+    const soldTickets = await OrderModel.find({ paymentStatus: "paid" })
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "All sold tickets fetched successfully",
+      data: soldTickets,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   blockUserById,
   deleteUser,
+  getAllSoldTickets,
   getAllUsers,
   unblockUserById,
   updateUserRole,

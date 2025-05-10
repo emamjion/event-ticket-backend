@@ -9,6 +9,7 @@ import orderRouter from "../routes/orderRoute.js";
 import paymentRouter from "../routes/paymentRoute.js";
 import ticketRouter from "../routes/ticketRoute.js";
 import userRouter from "../routes/userRoute.js";
+import sellerRouter from "../routes/sellerRoute.js";
 // import jwtRouter from "../routes/jwtRoute.js";
 
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/orders", orderRouter);
+app.use("/api/v1/seller", sellerRouter);
 
 // Root route
 app.get("/", (req, res) => {

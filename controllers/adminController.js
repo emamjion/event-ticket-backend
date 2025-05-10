@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import OrderModel from "../models/orderModel.js";
+import SellerModel from "../models/sellerModel.js";
 import UserModel from "../models/userModel.js";
 
 // add new user by admin panel
@@ -229,10 +230,30 @@ const getAllSoldTickets = async (req, res) => {
   }
 };
 
+// Get All Sellers (admin only)
+const getAllSellers = async (req, res) => {
+  try {
+    const sellers = await SellerModel.find().populate("userId", "name email");
+
+    res.status(200).json({
+      success: true,
+      total: sellers.length,
+      sellers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to get sellers",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   blockUserById,
   deleteUser,
+  getAllSellers,
   getAllSoldTickets,
   getAllUsers,
   unblockUserById,

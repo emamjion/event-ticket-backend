@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import OrderModel from "../models/orderModel.js";
-import SellerModel from "../models/sellerModel.js";
+import SellerRequestModel from "../models/sellerRequestModel.js";
 import UserModel from "../models/userModel.js";
+import SellerModel from "../models/sellerModel.js";
 
 // add new user by admin panel
 const addNewUserByAdmin = async (req, res) => {
@@ -230,32 +231,94 @@ const getAllSoldTickets = async (req, res) => {
   }
 };
 
-// Get All Sellers (admin only)
-const getAllSellers = async (req, res) => {
+// function to get all pending sellers
+const getPendingSellerRequests = async (req, res) => {
   try {
-    const sellers = await SellerModel.find().populate("userId", "name email");
+    const requests = await SellerRequestModel.find({ status: "pending" });
 
     res.status(200).json({
       success: true,
-      total: sellers.length,
-      sellers,
+      message: "All pending seller requests fetched successfully.",
+      total: requests.length,
+      requests,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: "Failed to get sellers",
+      message: "Failed to fetch requests",
       error: error.message,
     });
   }
 };
 
+// function to approve seler request
+const approveSellerRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const request = await SellerRequestModel.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    // Check if user exists, else create
+    let user = await UserModel.findOne({ email: request.email });
+
+    if (!user) {
+      user = await UserModel.create({
+        name: request.name,
+        email: request.email,
+        password: "123456", // default or generate random, force change later
+        role: "seller",
+      });
+    } else {
+      user.role = "seller";
+      await user.save();
+    }
+
+    // Create seller profile
+    await SellerModel.create({
+      userId: user._id,
+      shopName: request.shopName,
+      bio: request.bio,
+      contactNumber: request.contactNumber,
+      address: request.address,
+      website: request.website,
+      isVerified: true,
+    });
+
+    // Update request status
+    request.status = "approved";
+    await request.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Seller approved & account created",
+      token,
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Approval failed", error: error.message });
+  }
+};
+
+
 export {
   addNewUserByAdmin,
   blockUserById,
   deleteUser,
-  getAllSellers,
+  //   getAllSellers,
   getAllSoldTickets,
   getAllUsers,
+  getPendingSellerRequests,
+  approveSellerRequest,
   unblockUserById,
   updateUserRole,
 };

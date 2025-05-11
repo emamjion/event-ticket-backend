@@ -1,11 +1,12 @@
 import express from "express";
 import {
   addNewUserByAdmin,
+  approveSellerRequest,
   blockUserById,
   deleteUser,
-  getAllSellers,
   getAllSoldTickets,
   getAllUsers,
+  getPendingSellerRequests,
   unblockUserById,
   updateUserRole,
 } from "../controllers/adminController.js";
@@ -40,7 +41,22 @@ adminRouter.put("/unblock-user/:id", verifyToken, verifyAdmin, unblockUserById);
 // get all sold tickets
 adminRouter.get("/sold-tickets", verifyToken, verifyAdmin, getAllSoldTickets);
 
+// get all seller requests
+adminRouter.get(
+  "/seller-request",
+  verifyToken,
+  verifyAdmin,
+  getPendingSellerRequests
+);
+// approve seller request
+adminRouter.patch(
+  "/seller-requests/approve/:requestId",
+  verifyToken,
+  verifyAdmin,
+  approveSellerRequest
+);
+
 // get all sellers
-adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);
+// adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);
 
 export default adminRouter;

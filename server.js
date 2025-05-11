@@ -7,6 +7,7 @@ import adminRouter from "./routes/adminRoute.js";
 import authRouter from "./routes/authRoute.js";
 import orderRouter from "./routes/orderRoute.js";
 import paymentRouter from "./routes/paymentRoute.js";
+import sellerRequestRouter from "./routes/sellerRequestRoute.js";
 import sellerRouter from "./routes/sellerRoute.js";
 import ticketRouter from "./routes/ticketRoute.js";
 import userRouter from "./routes/userRoute.js";
@@ -37,6 +38,8 @@ app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/orders", orderRouter);
 // seller router
 app.use("/api/v1/seller", sellerRouter);
+// seller request router
+app.use("/api/v1/seller-request", sellerRequestRouter);
 // JWT route (optional)
 // app.use("/api", jwtRouter);
 

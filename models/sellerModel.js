@@ -13,6 +13,11 @@ const sellerSchema = new mongoose.Schema(
       trim: true,
       required: false,
     },
+    email: {
+      type: String,
+      trim: true,
+      required: true,
+    },
     bio: {
       type: String,
       trim: true,

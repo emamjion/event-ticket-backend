@@ -16,7 +16,7 @@ const submitSellerRequest = async (req, res) => {
       });
     }
 
-    const request = await SellerRequest.create({
+    const request = await SellerRequestModel.create({
       name,
       email,
       shopName,

@@ -375,6 +375,41 @@ const denySellerRequest = async (req, res) => {
   }
 };
 
+// function to monitor seller acitvity
+const monitorSellerActivity = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+
+    // SellerModel theke seller khuja hocche & tar user info populate hocche
+    const seller = await SellerModel.findById(sellerId).populate("userId", "name email");
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found",
+      });
+    }
+
+    // TicketModel theke seller er sold tickets gulo fetch kora hocche
+    const soldTickets = await TicketModel.find({
+      sellerId: sellerId,
+      isSold: true,
+    }).populate("buyerId", "name email");
+
+    res.status(200).json({
+      success: true,
+      message: `Sold tickets fetched for seller: ${seller.userId.name}`,
+      total: soldTickets.length,
+      soldTickets,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch seller activity",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   approveSellerRequest,
@@ -385,6 +420,7 @@ export {
   getAllSoldTickets,
   getAllUsers,
   getPendingSellerRequests,
+  monitorSellerActivity,
   unblockUserById,
   updateUserRole,
 };

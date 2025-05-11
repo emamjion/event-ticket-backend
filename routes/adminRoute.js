@@ -8,6 +8,7 @@ import {
   getAllSoldTickets,
   getAllUsers,
   getPendingSellerRequests,
+  monitorSellerActivity,
   unblockUserById,
   updateUserRole,
 } from "../controllers/adminController.js";
@@ -58,7 +59,20 @@ adminRouter.patch(
 );
 
 // deny seller request
-adminRouter.patch("/seller-requests/deny/:requestId", verifyToken, verifyAdmin, denySellerRequest);
+adminRouter.patch(
+  "/seller-requests/deny/:requestId",
+  verifyToken,
+  verifyAdmin,
+  denySellerRequest
+);
+
+// route for monitoring seller activity
+adminRouter.get(
+  "/monitor-seller/:sellerId",
+  verifyToken,
+  verifyAdmin,
+  monitorSellerActivity
+);
 
 // get all sellers
 // adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);

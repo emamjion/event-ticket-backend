@@ -3,6 +3,51 @@ import UserModel from "../models/userModel.js";
 import { createToken } from "../utils/jwtToken.js";
 
 // create user route
+// const createUser = async (req, res) => {
+//   try {
+//     const { name, email, password } = req.body;
+
+//     // Check if user already exists
+//     const existingUser = await UserModel.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "User already exists with this email",
+//       });
+//     }
+
+//     // Hash the password
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     // Create new user with hashed password
+//     const newUser = new UserModel({
+//       name,
+//       email,
+//       password: hashedPassword,
+//     });
+
+//     await newUser.save();
+
+//     res.status(201).json({
+//       success: true,
+//       message: "User created successfully",
+//       data: {
+//         _id: newUser._id,
+//         name: newUser.name,
+//         email: newUser.email,
+//         password: "*****",
+//       },
+//     });
+//   } catch (error) {
+//     res.status(400).json({
+//       success: false,
+//       message: "Failed to create user",
+//       error: error.message,
+//     });
+//   }
+// };
+
 const createUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -20,11 +65,12 @@ const createUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user with hashed password
+    // Create new user with default role = buyer
     const newUser = new UserModel({
       name,
       email,
       password: hashedPassword,
+      // role: "buyer",
     });
 
     await newUser.save();
@@ -36,6 +82,7 @@ const createUser = async (req, res) => {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        role: newUser.role,
         password: "*****",
       },
     });

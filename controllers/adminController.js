@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import OrderModel from "../models/orderModel.js";
+import SellerModel from "../models/sellerModel.js";
 import SellerRequestModel from "../models/sellerRequestModel.js";
 import UserModel from "../models/userModel.js";
-import SellerModel from "../models/sellerModel.js";
 
 // add new user by admin panel
 const addNewUserByAdmin = async (req, res) => {
@@ -258,7 +258,9 @@ const approveSellerRequest = async (req, res) => {
 
     const request = await SellerRequestModel.findById(requestId);
     if (!request) {
-      return res.status(404).json({ success: false, message: "Request not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Request not found" });
     }
 
     // Check if user exists, else create
@@ -305,20 +307,56 @@ const approveSellerRequest = async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Approval failed", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Approval failed",
+        error: error.message,
+      });
   }
 };
 
+// function to deny seller request
+const denySellerRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const request = await SellerRequestModel.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller request not found",
+      });
+    }
+
+    // Update status to denied
+    request.status = "denied";
+    await request.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Seller request has been denied",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to deny request",
+      error: error.message,
+    });
+  }
+};
 
 export {
   addNewUserByAdmin,
+  approveSellerRequest,
   blockUserById,
   deleteUser,
-  //   getAllSellers,
+  denySellerRequest,
   getAllSoldTickets,
   getAllUsers,
   getPendingSellerRequests,
-  approveSellerRequest,
   unblockUserById,
   updateUserRole,
 };

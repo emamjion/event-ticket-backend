@@ -4,6 +4,7 @@ import {
   approveSellerRequest,
   blockUserById,
   deleteUser,
+  denySellerRequest,
   getAllSoldTickets,
   getAllUsers,
   getPendingSellerRequests,
@@ -55,6 +56,9 @@ adminRouter.patch(
   verifyAdmin,
   approveSellerRequest
 );
+
+// deny seller request
+adminRouter.patch("/seller-requests/deny/:requestId", verifyToken, verifyAdmin, denySellerRequest);
 
 // get all sellers
 // adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);

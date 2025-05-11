@@ -7,9 +7,9 @@ import adminRouter from "../routes/adminRoute.js";
 import authRouter from "../routes/authRoute.js";
 import orderRouter from "../routes/orderRoute.js";
 import paymentRouter from "../routes/paymentRoute.js";
+import sellerRouter from "../routes/sellerRoute.js";
 import ticketRouter from "../routes/ticketRoute.js";
 import userRouter from "../routes/userRoute.js";
-import sellerRouter from "../routes/sellerRoute.js";
 // import jwtRouter from "../routes/jwtRoute.js";
 
 const app = express();

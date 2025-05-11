@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import SellerModel from "../models/sellerModel.js";
+import UserModel from "../models/userModel.js";
 
 // const createSellerProfile = async (req, res) => {
 //   try {
@@ -71,7 +73,7 @@ const getMySellerProfile = async (req, res) => {
 
     const profile = await SellerModel.findOne({ userId }).populate(
       "userId",
-      "name email"
+      "name"
     );
 
     if (!profile) {
@@ -127,25 +129,31 @@ const deleteSellerProfile = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const deleted = await SellerModel.findOneAndDelete({ userId });
+    const objectId = new mongoose.Types.ObjectId(userId);
 
-    if (!deleted) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Seller profile not found" });
+    const seller = await SellerModel.findOne({ userId: objectId });
+
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller profile not found",
+      });
     }
 
-    // Optional: Update user role to 'user'
-    await User.findByIdAndUpdate(userId, { role: "user" });
+    await SellerModel.deleteOne({ userId: objectId });
+    await UserModel.findByIdAndUpdate(userId, { role: "user" });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Seller profile deleted",
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Delete failed", error: error.message });
+    console.error("Delete error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Delete failed",
+      error: error.message,
+    });
   }
 };
 

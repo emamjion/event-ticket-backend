@@ -4,6 +4,7 @@ import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import SellerRequestModel from "../models/sellerRequestModel.js";
 import UserModel from "../models/userModel.js";
+import TicketModel from "../models/ticketModel.js";
 
 // add new user by admin panel
 const addNewUserByAdmin = async (req, res) => {
@@ -288,15 +289,19 @@ const approveSellerRequest = async (req, res) => {
     let user = await UserModel.findOne({ email: request.email });
 
     if (!user) {
-      // Create new user if not exists
+      // Hash the default password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash("123456", salt);
+
+      // Create new user with hashed password
       user = await UserModel.create({
         name: request.name,
         email: request.email,
-        password: "123456",
+        password: hashedPassword,
         role: "seller",
       });
     } else {
-      // Update role if user exists
+      // If user exists, update role
       user.role = "seller";
       await user.save();
     }
@@ -308,7 +313,8 @@ const approveSellerRequest = async (req, res) => {
       // Create seller profile only if not already exists
       await SellerModel.create({
         userId: user._id,
-        email: request.email,
+        name: user.name,
+        email: user.email,
         shopName: request.shopName,
         bio: request.bio,
         contactNumber: request.contactNumber,
@@ -381,7 +387,10 @@ const monitorSellerActivity = async (req, res) => {
     const { sellerId } = req.params;
 
     // SellerModel theke seller khuja hocche & tar user info populate hocche
-    const seller = await SellerModel.findById(sellerId).populate("userId", "name email");
+    const seller = await SellerModel.findById(sellerId).populate(
+      "userId",
+      "name email"
+    );
     if (!seller) {
       return res.status(404).json({
         success: false,

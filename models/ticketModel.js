@@ -34,6 +34,17 @@ const ticketSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    ticketSold : {
+      type : Number,
+      default : 0
+    },
+    
+
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Seller",
+      required: true,
+    },
   },
   {
     timestamps: true,

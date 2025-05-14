@@ -4,6 +4,7 @@ const verifySeller = async (req, res, next) => {
   try {
     const email = req.user.email;
     const user = await UserModel.findOne({ email });
+    console.log("email: ", email);
 
     if (!user || user.role !== "seller") {
       return res.status(403).json({ message: "Access denied. Sellers only." });

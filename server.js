@@ -5,6 +5,7 @@ import connectCloudinary from "./config/cloudinary.js";
 import connectDB from "./config/mongodb.js";
 import adminRouter from "./routes/adminRoute.js";
 import authRouter from "./routes/authRoute.js";
+import eventRouter from "./routes/event.route.js";
 import orderRouter from "./routes/orderRoute.js";
 import paymentRouter from "./routes/paymentRoute.js";
 import sellerRequestRouter from "./routes/sellerRequestRoute.js";
@@ -40,6 +41,8 @@ app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/seller", sellerRouter);
 // seller request router
 app.use("/api/v1/seller-request", sellerRequestRouter);
+
+app.use("/api/v1/event", eventRouter);
 // JWT route (optional)
 // app.use("/api", jwtRouter);
 

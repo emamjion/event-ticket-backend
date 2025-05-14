@@ -26,17 +26,18 @@ const userSchema = new mongoose.Schema(
     },
     purchasedTickets: [
       {
-        ticketId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Ticket",
-        },
+        ticketId: mongoose.Schema.Types.ObjectId,
         title: String,
-        description: String,
-        date: Date,
-        time: String,
-        location: String,
-        image: String,
         price: Number,
+        seat: {
+          name: String,
+          section: String,
+        },
+        paymentInfo: {
+          method: String,
+          transactionId: String,
+        },
+        date: Date,
       },
     ],
   },

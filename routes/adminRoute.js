@@ -12,7 +12,7 @@ import {
   unblockUserById,
   updateUserRole,
 } from "../controllers/adminController.js";
-import { publishTicket } from "../controllers/publishTicketController.js";
+import { publishEvent } from "../controllers/publishEvent.controller.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -24,12 +24,7 @@ adminRouter.get("/users", verifyToken, verifyAdmin, getAllUsers);
 adminRouter.delete("/users/:id", verifyToken, verifyAdmin, deleteUser);
 
 // publish ticket
-adminRouter.put(
-  "/tickets/:id/publish",
-  verifyToken,
-  verifyAdmin,
-  publishTicket
-);
+adminRouter.put("/events/:id/publish", verifyToken, verifyAdmin, publishEvent);
 
 // add new user
 adminRouter.post("/add-user", verifyToken, verifyAdmin, addNewUserByAdmin);

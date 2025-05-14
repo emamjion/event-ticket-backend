@@ -3,8 +3,8 @@ import jwt from "jsonwebtoken";
 import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import SellerRequestModel from "../models/sellerRequestModel.js";
-import UserModel from "../models/userModel.js";
 import TicketModel from "../models/ticketModel.js";
+import UserModel from "../models/userModel.js";
 
 // add new user by admin panel
 const addNewUserByAdmin = async (req, res) => {
@@ -277,40 +277,43 @@ const getPendingSellerRequests = async (req, res) => {
 const approveSellerRequest = async (req, res) => {
   try {
     const { requestId } = req.params;
-
     const request = await SellerRequestModel.findById(requestId);
     if (!request) {
       return res
         .status(404)
         .json({ success: false, message: "Request not found" });
     }
-
-    // Check if user exists
     let user = await UserModel.findOne({ email: request.email });
 
     if (!user) {
-      // Hash the default password
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash("123456", salt);
+      try {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash("123456", salt);
 
-      // Create new user with hashed password
-      user = await UserModel.create({
-        name: request.name,
-        email: request.email,
-        password: hashedPassword,
-        role: "seller",
-      });
+        // Create new user
+        user = await UserModel.create({
+          name: request.name,
+          email: request.email,
+          password: hashedPassword,
+          role: "seller",
+        });
+
+        // console.log("New user created:", user.email);
+      } catch (err) {
+        console.error("User creation error:", err.message);
+        return res
+          .status(500)
+          .json({ success: false, message: "Failed to create user" });
+      }
     } else {
-      // If user exists, update role
       user.role = "seller";
       await user.save();
+      // console.log("Existing user role updated to seller:", user.email);
     }
 
-    // Check if Seller profile already exists
     const existingSeller = await SellerModel.findOne({ userId: user._id });
 
     if (!existingSeller) {
-      // Create seller profile only if not already exists
       await SellerModel.create({
         userId: user._id,
         name: user.name,
@@ -322,9 +325,13 @@ const approveSellerRequest = async (req, res) => {
         website: request.website,
         isVerified: true,
       });
+
+      console.log("Seller profile created for:", user.email);
+    } else {
+      console.log("Seller profile already exists for:", user.email);
     }
 
-    // Update request status
+    // Approve the request
     request.status = "approved";
     await request.save();
 
@@ -342,6 +349,7 @@ const approveSellerRequest = async (req, res) => {
       user,
     });
   } catch (error) {
+    console.error("Approval error:", error.message);
     res.status(500).json({
       success: false,
       message: "Approval failed",

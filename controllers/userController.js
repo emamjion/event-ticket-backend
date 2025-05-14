@@ -97,8 +97,9 @@ const getPurchasedTickets = async (req, res) => {
 // buy ticket
 const buyTicket = async (req, res) => {
   try {
-    const { userId, ticketId } = req.body;
+    const { userId, ticketId, seat, paymentInfo } = req.body;
 
+    // 1. User check
     const user = await UserModel.findById(userId);
     if (!user) {
       return res
@@ -106,6 +107,7 @@ const buyTicket = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
+    // 2. Ticket check
     const ticket = await TicketModel.findById(ticketId);
     if (!ticket) {
       return res
@@ -113,42 +115,58 @@ const buyTicket = async (req, res) => {
         .json({ success: false, message: "Ticket not found" });
     }
 
-    // Check if already purchased
+    // 3. Already purchased check
     const alreadyPurchased = user.purchasedTickets.some(
       (t) => t.ticketId.toString() === ticketId
     );
-
     if (alreadyPurchased) {
       return res.status(400).json({
         success: false,
-        message: "You have already buy this ticket.",
+        message: "You have already bought this ticket.",
       });
     }
 
-    // Push ticket into user's purchase list
+    // 4. Availability check
+    if (ticket.ticketsAvailable <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Tickets are sold out.",
+      });
+    }
+
+    // 5. Push ticket into user's purchased list
     user.purchasedTickets.push({
       ticketId: ticket._id,
       title: ticket.title,
       price: ticket.price,
+      seat,
+      paymentInfo,
       date: new Date(),
     });
 
-    // Only update role IF current role is 'user'
+    // 6. Change role if needed
     if (user.role === "user") {
       user.role = "buyer";
     }
 
-    await user.save();
+    // 7. Decrease available ticket count
+    ticket.ticketsAvailable -= 1;
+    ticket.ticketSold += 1;
 
+    // 8. Save both user and ticket
+    await user.save();
+    await ticket.save();
+
+    // 9. Send response
     res.status(200).json({
       success: true,
       message: "Ticket bought successfully",
       data: {
-        _id,
-        name,
-        email,
-        role,
-        purchasedTickets,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        purchasedTickets: user.purchasedTickets,
       },
     });
   } catch (error) {

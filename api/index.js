@@ -11,6 +11,7 @@ import sellerRequestRouter from "../routes/sellerRequestRoute.js";
 import sellerRouter from "../routes/sellerRoute.js";
 import ticketRouter from "../routes/ticketRoute.js";
 import userRouter from "../routes/userRoute.js";
+import eventRouter from "../routes/event.route.js";
 // import jwtRouter from "../routes/jwtRoute.js";
 
 const app = express();
@@ -31,6 +32,8 @@ app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/seller", sellerRouter);
 app.use("/api/v1/seller-request", sellerRequestRouter);
+
+app.use("/api/v1/event", eventRouter);
 
 // Root route
 app.get("/", (req, res) => {

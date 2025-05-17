@@ -157,9 +157,42 @@ const deleteSellerProfile = async (req, res) => {
   }
 };
 
+// function to update payment info
+const updatePaymentInfo = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const seller = await SellerModel.findOne({ userId });
+    if (!seller) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Seller not found" });
+    }
+
+    const { method, accountNumber, accountName } = req.body;
+
+    seller.paymentInfo = {
+      method,
+      accountNumber,
+      accountName,
+      status: "pending", // verification needed
+    };
+
+    await seller.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Payment information updated. Awaiting verification.",
+      paymentInfo: seller.paymentInfo,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export {
   deleteSellerProfile,
   getMySellerProfile,
   getSellerProfileById,
+  updatePaymentInfo,
   updateSellerProfile,
 };

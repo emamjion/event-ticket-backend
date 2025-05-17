@@ -11,6 +11,7 @@ import {
   monitorSellerActivity,
   unblockUserById,
   updateUserRole,
+  verifySellerPaymentInfo,
 } from "../controllers/adminController.js";
 import { publishEvent } from "../controllers/publishEvent.controller.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
@@ -37,6 +38,13 @@ adminRouter.put("/block-user/:id", verifyToken, verifyAdmin, blockUserById);
 adminRouter.put("/unblock-user/:id", verifyToken, verifyAdmin, unblockUserById);
 // get all sold tickets
 adminRouter.get("/sold-tickets", verifyToken, verifyAdmin, getAllSoldTickets);
+// verify payment for seller
+adminRouter.put(
+  "/verify-payment/:sellerId",
+  verifyToken,
+  verifyAdmin,
+  verifySellerPaymentInfo
+);
 
 // get all seller requests
 adminRouter.get(

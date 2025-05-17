@@ -427,6 +427,43 @@ const monitorSellerActivity = async (req, res) => {
   }
 };
 
+// function to verify seller payment info
+const verifySellerPaymentInfo = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+
+    const seller = await SellerModel.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found",
+      });
+    }
+
+    if (!seller.paymentInfo || !seller.paymentInfo.accountNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Seller has no payment info to verify",
+      });
+    }
+
+    seller.paymentInfo.status = "verified";
+    await seller.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Seller payment info verified successfully",
+      paymentInfo: seller.paymentInfo,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   approveSellerRequest,
@@ -440,4 +477,5 @@ export {
   monitorSellerActivity,
   unblockUserById,
   updateUserRole,
+  verifySellerPaymentInfo,
 };

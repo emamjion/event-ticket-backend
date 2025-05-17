@@ -10,16 +10,31 @@ import {
   getPublishedEvents,
 } from "../controllers/publishEvent.controller.js";
 
-import verifySeller from "../middleware/verifySeller.js";
+import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const eventRouter = express.Router();
 eventRouter.get("/events", getPublishedEvents);
 eventRouter.get("/events/:id", getPublishedEventById);
 
-eventRouter.post("/create-event", verifyToken, verifySeller, createEvent);
-eventRouter.get("/my-events", verifyToken, verifySeller, getSellerEvents);
-eventRouter.put("/update/:id", verifyToken, verifySeller, updateEvent);
-eventRouter.delete("/delete/:id", verifyToken, verifySeller, deleteEvent);
+eventRouter.post(
+  "/create-event",
+  verifyToken,
+  verifySellerOrAdmin,
+  createEvent
+);
+eventRouter.get(
+  "/my-events",
+  verifyToken,
+  verifySellerOrAdmin,
+  getSellerEvents
+);
+eventRouter.put("/update/:id", verifyToken, verifySellerOrAdmin, updateEvent);
+eventRouter.delete(
+  "/delete/:id",
+  verifyToken,
+  verifySellerOrAdmin,
+  deleteEvent
+);
 
 export default eventRouter;

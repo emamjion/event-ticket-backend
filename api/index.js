@@ -5,14 +5,14 @@ import connectCloudinary from "../config/cloudinary.js";
 import connectDB from "../config/mongodb.js";
 import adminRouter from "../routes/adminRoute.js";
 import authRouter from "../routes/authRoute.js";
+import bookingRouter from "../routes/booking.route.js";
+import eventRouter from "../routes/event.route.js";
 import orderRouter from "../routes/orderRoute.js";
 import paymentRouter from "../routes/paymentRoute.js";
 import sellerRequestRouter from "../routes/sellerRequestRoute.js";
 import sellerRouter from "../routes/sellerRoute.js";
 import ticketRouter from "../routes/ticketRoute.js";
 import userRouter from "../routes/userRoute.js";
-import eventRouter from "../routes/event.route.js";
-import bookingRouter from "../routes/booking.route.js";
 // import jwtRouter from "../routes/jwtRoute.js";
 
 const app = express();

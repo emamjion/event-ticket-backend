@@ -1,16 +1,23 @@
 import EventModel from "../models/eventModel.js";
 import SellerModel from "../models/sellerModel.js";
 
-// Create Event
+// 🔧 Helper to get sellerId based on role
+const getSellerId = async (user) => {
+  if (user.role === "seller") {
+    const seller = await SellerModel.findOne({ userId: user.id });
+    if (!seller) throw new Error("Seller not found");
+    return seller._id;
+  } else if (user.role === "admin") {
+    return user.id; // Use admin's userId directly
+  } else {
+    throw new Error("Unauthorized");
+  }
+};
+
+// ✅ Create Event
 const createEvent = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const seller = await SellerModel.findOne({ userId });
-    if (!seller) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Seller not found" });
-    }
+    const sellerId = await getSellerId(req.user);
 
     const {
       title,
@@ -26,7 +33,7 @@ const createEvent = async (req, res) => {
     const existingEvent = await EventModel.findOne({
       title,
       date,
-      sellerId: seller._id,
+      sellerId,
     });
 
     if (existingEvent) {
@@ -46,7 +53,7 @@ const createEvent = async (req, res) => {
       price,
       isPublished: false,
       ticketsAvailable,
-      sellerId: seller._id,
+      sellerId,
     });
 
     await newEvent.save();
@@ -61,87 +68,71 @@ const createEvent = async (req, res) => {
   }
 };
 
-// Get All Events for a Seller
+// ✅ Get Seller/Admin Events
 const getSellerEvents = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const seller = await SellerModel.findOne({ userId });
+    const sellerId = await getSellerId(req.user);
 
-    if (!seller) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Seller not found" });
-    }
-
-    const events = await EventModel.find({ sellerId: seller._id });
+    const events = await EventModel.find({ sellerId });
     res.status(200).json({ success: true, totalEvents: events.length, events });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Update Event
+// ✅ Update Event
 const updateEvent = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const seller = await SellerModel.findOne({ userId });
-
-    if (!seller) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Seller not found" });
-    }
-
+    const sellerId = await getSellerId(req.user);
     const eventId = req.params.id;
+
     const event = await EventModel.findOne({
       _id: eventId,
-      sellerId: seller._id,
+      sellerId,
     });
 
     if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found or unauthorized" });
+      return res.status(404).json({
+        success: false,
+        message: "Event not found or unauthorized",
+      });
     }
 
     Object.assign(event, req.body);
     await event.save();
 
-    res
-      .status(200)
-      .json({ success: true, message: "Event updated successfully", event });
+    res.status(200).json({
+      success: true,
+      message: "Event updated successfully",
+      event,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Delete Event
+// ✅ Delete Event
 const deleteEvent = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const seller = await SellerModel.findOne({ userId });
-
-    if (!seller) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Seller not found" });
-    }
-
+    const sellerId = await getSellerId(req.user);
     const eventId = req.params.id;
+
     const event = await EventModel.findOneAndDelete({
       _id: eventId,
-      sellerId: seller._id,
+      sellerId,
     });
 
     if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found or unauthorized" });
+      return res.status(404).json({
+        success: false,
+        message: "Event not found or unauthorized",
+      });
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: "Event deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Event deleted successfully",
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

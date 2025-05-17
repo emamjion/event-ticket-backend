@@ -41,6 +41,16 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    paymentInfo: {
+      method: { type: String }, // e.g., 'bKash', 'Nagad', 'Bank', 'Stripe'
+      accountNumber: { type: String },
+      accountName: { type: String },
+      status: {
+        type: String,
+        enum: ["pending", "verified"],
+        default: "pending", // admin verify korbe
+      },
+    },
   },
   {
     timestamps: true,

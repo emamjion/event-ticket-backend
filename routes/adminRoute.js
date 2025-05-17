@@ -14,6 +14,7 @@ import {
   verifySellerPaymentInfo,
 } from "../controllers/adminController.js";
 import { publishEvent } from "../controllers/publishEvent.controller.js";
+import { handleWithdrawalRequest } from "../controllers/withdrawal.controller.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -75,6 +76,14 @@ adminRouter.get(
   verifyToken,
   verifyAdmin,
   monitorSellerActivity
+);
+
+// route for withdrawal request
+adminRouter.put(
+  "/handle/:requestId",
+  verifyToken,
+  verifyAdmin,
+  handleWithdrawalRequest
 );
 
 // get all sellers

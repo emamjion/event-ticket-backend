@@ -6,6 +6,7 @@ import OrderModel from "../models/orderModel.js";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Create Payment: create Stripe payment intent and order
+
 const createPayment = async (req, res) => {
   const { bookingId } = req.body;
 
@@ -14,12 +15,13 @@ const createPayment = async (req, res) => {
   }
 
   try {
+    // 1. Get booking info
     const booking = await BookingModel.findById(bookingId);
     if (!booking) {
       return res.status(404).json({ message: "Booking not found." });
     }
 
-    // Check existing order
+    // 2. Check if order already exists for this booking
     const existingOrder = await OrderModel.findOne({ bookingId });
     if (existingOrder) {
       return res.status(400).json({
@@ -29,9 +31,18 @@ const createPayment = async (req, res) => {
       });
     }
 
-    // Create Stripe payment intent
+    // 3. Get event info to fetch sellerId
+    const event = await EventModel.findById(booking.eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    // 4. Calculate quantity from seats length
+    const quantity = booking.seats?.length || 1;
+
+    // 5. Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(booking.totalAmount * 100),
+      amount: Math.round(booking.totalAmount * 100), // amount in cents
       currency: "usd",
       metadata: {
         bookingId: booking._id.toString(),
@@ -40,12 +51,14 @@ const createPayment = async (req, res) => {
       },
     });
 
-    // Create order with Stripe paymentIntentId
+    // 6. Create a new order with all required fields
     const newOrder = new OrderModel({
       bookingId,
       buyerId: booking.buyerId,
+      sellerId: event.sellerId, // assuming your Event model has sellerId
       eventId: booking.eventId,
       seats: booking.seats,
+      quantity,
       totalAmount: booking.totalAmount,
       paymentStatus: "pending",
       paymentIntentId: paymentIntent.id,
@@ -53,16 +66,22 @@ const createPayment = async (req, res) => {
 
     await newOrder.save();
 
+    // 7. Respond with client secret for frontend payment confirmation
     return res.status(201).json({
       success: true,
       message: "Order created, proceed to payment.",
       orderId: newOrder._id,
-      clientSecret: paymentIntent.client_secret, // for frontend to confirm payment
+      clientSecret: paymentIntent.client_secret,
       amount: newOrder.totalAmount,
     });
   } catch (error) {
     console.error("Create Payment error:", error);
-    res.status(500).json({ message: "Internal Server Error", error });
+    res
+      .status(500)
+      .json({
+        message: "Internal Server Error",
+        error: error.message || error,
+      });
   }
 };
 

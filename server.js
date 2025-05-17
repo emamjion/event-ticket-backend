@@ -13,6 +13,7 @@ import sellerRequestRouter from "./routes/sellerRequestRoute.js";
 import sellerRouter from "./routes/sellerRoute.js";
 import ticketRouter from "./routes/ticketRoute.js";
 import userRouter from "./routes/userRoute.js";
+import withdrawalRouter from "./routes/withdrawal.route.js";
 // import jwtRouter from "./routes/jwtRoute.js";
 
 const app = express();
@@ -45,6 +46,8 @@ app.use("/api/v1/seller-request", sellerRequestRouter);
 
 app.use("/api/v1/event", eventRouter);
 app.use("/api/v1/bookings", bookingRouter);
+app.use("/api/v1/withdraw", withdrawalRouter);
+
 // JWT route (optional)
 // app.use("/api", jwtRouter);
 

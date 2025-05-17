@@ -5,13 +5,13 @@ const getMyOrders = async (req, res) => {
     const userId = req.user.id;
 
     const orders = await OrderModel.find({
-      userId: userId,
-      paymentStatus: "paid",
+      buyerId: userId,
+      paymentStatus: "success",
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      message: "Oders fetched successfully",
+      message: "Orders fetched successfully",
       data: orders,
     });
   } catch (error) {
@@ -23,13 +23,12 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// function to get single order by id
 const getSingleOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const order = await OrderModel.findOne({ _id: id, userId });
+    const order = await OrderModel.findOne({ _id: id, buyerId: userId });
 
     if (!order) {
       return res.status(404).json({

@@ -1,33 +1,48 @@
 import OrderModel from "../models/orderModel.js";
+import SellerModel from "../models/sellerModel.js";
 
+// Seller's Earnings Controller
 const getSellerEarnings = async (req, res) => {
   try {
-    const sellerId = req.params.sellerId;
+    const userId = req.user.id;
 
-    const orders = await OrderModel.find()
-      .populate({
-        path: "ticketId",
-        match: { sellerId },
-        select: "price quantity",
-      })
-      .exec();
+    // find seller from userId
+    const seller = await SellerModel.findOne({ userId });
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found",
+      });
+    }
 
-    const filteredOrders = orders.filter((order) => order.ticketId);
+    const sellerId = seller._id;
 
-    const totalEarnings = filteredOrders.reduce((acc, order) => {
-      return acc + order.ticketId.price * order.quantity;
-    }, 0);
+    // Get all orders of this seller
+    const orders = await OrderModel.find({ sellerId });
+
+    let totalEarnings = 0;
+    let totalTicketsSold = 0;
+
+    orders.forEach((order) => {
+      totalEarnings += order.totalAmount;
+      totalTicketsSold += order.quantity;
+    });
 
     res.status(200).json({
       success: true,
       message: "Seller earnings fetched successfully",
-      totalEarnings,
-      totalOrders: filteredOrders.length,
-      orders: filteredOrders,
+      data: {
+        totalEarnings,
+        totalTicketsSold,
+        orders,
+      },
     });
   } catch (error) {
-    console.error("Error getting seller earnings:", error);
-    res.status(500).json({ success: false, message: "Server Error", error });
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong while fetching earnings",
+      error: error.message,
+    });
   }
 };
 

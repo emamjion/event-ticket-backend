@@ -1,61 +1,40 @@
 import mongoose from "mongoose";
 
-// Selected seat schema
-const seatSchema = new mongoose.Schema(
-  {
-    id: String,
-    name: String,
-    number: Number,
-    row: String,
-    section: String,
-    price: Number,
-  },
-  { _id: false }
-);
-
-// Ticket type schema
-const ticketTypeSchema = new mongoose.Schema(
-  {
-    id: Number,
-    name: String,
-    price: String,
-    contactOnly: Boolean,
-  },
-  { _id: false }
-);
-
 const orderSchema = new mongoose.Schema({
-  userId: {
+  bookingId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Booking",
+    required: true,
+  },
+  buyerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-
-  ticketId: {
+  eventId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Ticket",
+    ref: "Event",
     required: true,
   },
-
-  ticketType: ticketTypeSchema,
-
-  selectedSeats: [seatSchema],
-
-  quantity: { type: Number, required: true },
-
-  totalPrice: { type: Number, required: true },
-
-  grandTotal: { type: Number, required: true },
-
+  seats: {
+    type: [
+      {
+        section: String,
+        row: String,
+        seatNumber: Number,
+        price: Number,
+      },
+    ],
+    required: true,
+  },
+  totalAmount: { type: Number, required: true },
   paymentStatus: {
     type: String,
-    enum: ["pending", "paid", "failed"],
+    enum: ["pending", "success", "failed"],
     default: "pending",
   },
-
-  stripePaymentId: String,
-
-  purchaseDate: {
+  paymentIntentId: String,
+  orderTime: {
     type: Date,
     default: Date.now,
   },

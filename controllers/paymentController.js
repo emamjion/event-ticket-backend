@@ -1,139 +1,145 @@
 import Stripe from "stripe";
+import BookingModel from "../models/booking.model.js";
+import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
-import TicketModel from "../models/ticketModel.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// function for payment
-const createTicketPayment = async (req, res) => {
-  try {
-    const { ticketId, quantity, userId } = req.body;
+// Create Payment: create Stripe payment intent and order
+const createPayment = async (req, res) => {
+  const { bookingId } = req.body;
 
-    if (!ticketId || !quantity) {
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId is required." });
+  }
+
+  try {
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found." });
+    }
+
+    // Check existing order
+    const existingOrder = await OrderModel.findOne({ bookingId });
+    if (existingOrder) {
       return res.status(400).json({
-        success: false,
-        error: "Please provide Ticket ID and Quantity",
+        message: "Payment already initiated for this booking.",
+        orderId: existingOrder._id,
+        paymentIntentId: existingOrder.paymentIntentId,
       });
     }
 
-    const ticket = await TicketModel.findById(ticketId);
-    if (!ticket)
-      return res.status(404).json({
-        success: false,
-        error: "Ticket not found",
-      });
-
-    const totalAmount = Number(ticket.price) * Number(quantity);
-
-    // Step: 1. Create Stripe PaymentIntent
+    // Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalAmount,
+      amount: Math.round(booking.totalAmount * 100),
       currency: "usd",
-      payment_method_types: ["card"],
+      metadata: {
+        bookingId: booking._id.toString(),
+        buyerId: booking.buyerId.toString(),
+        eventId: booking.eventId.toString(),
+      },
     });
 
-    // Step: 2. Save order in DB (status = pending)
-    const order = new OrderModel({
-      userId,
-      ticketId,
-      quantity,
-      totalAmount,
-      stripePaymentId: paymentIntent.id,
+    // Create order with Stripe paymentIntentId
+    const newOrder = new OrderModel({
+      bookingId,
+      buyerId: booking.buyerId,
+      eventId: booking.eventId,
+      seats: booking.seats,
+      totalAmount: booking.totalAmount,
       paymentStatus: "pending",
+      paymentIntentId: paymentIntent.id,
     });
-    await order.save();
 
-    // Step: 3. Send clientSecret back to frontend
-    res.status(200).json({
+    await newOrder.save();
+
+    return res.status(201).json({
       success: true,
-      message: "Payment intent created successfully",
-      clientSecret: paymentIntent.client_secret,
-      orderId: order._id,
+      message: "Order created, proceed to payment.",
+      orderId: newOrder._id,
+      clientSecret: paymentIntent.client_secret, // for frontend to confirm payment
+      amount: newOrder.totalAmount,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      messsage: "Internal server error",
-      error: error.message,
-    });
+    console.error("Create Payment error:", error);
+    res.status(500).json({ message: "Internal Server Error", error });
   }
 };
 
-// function to confirm payment and update order status
+// Confirm Payment: verify payment with Stripe and update order and event
 const confirmPayment = async (req, res) => {
+  const { orderId } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "orderId is required." });
+  }
+
   try {
-    const { orderId } = req.body;
-
-    if (!orderId) {
-      return res.status(400).json({
-        success: false,
-        error: "Order ID is required",
-      });
-    }
-
     const order = await OrderModel.findById(orderId);
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        error: "Order not found",
-      });
+      return res.status(404).json({ message: "Order not found." });
     }
 
-    // Check status from Stripe
+    if (order.paymentStatus === "success") {
+      return res
+        .status(400)
+        .json({ message: "Payment already confirmed for this order." });
+    }
+
+    // Retrieve payment intent status from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(
-      order.stripePaymentId
+      order.paymentIntentId
     );
 
-    if (paymentIntent.status === "succeeded") {
-      order.paymentStatus = "paid";
+    console.log(paymentIntent.status);
+
+    if (paymentIntent.status !== "succeeded") {
+      order.paymentStatus = "failed";
       await order.save();
-      return res.status(200).json({
-        success: true,
-        message: "Payment confirmed successfully",
-      });
-    } else {
-      return res.status(400).json({
-        success: false,
-        error: "Payment not completed yet",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Payment not successful." });
     }
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
+
+    // Payment success: update order and related models
+    order.paymentStatus = "success";
+    await order.save();
+
+    await BookingModel.findByIdAndUpdate(order.bookingId, {
+      status: "success",
+      isPaid: true,
+      paymentIntentId: order.paymentIntentId,
     });
+
+    const event = await EventModel.findById(order.eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    // Remove booked seats from event.seats
+    const remainingSeats = event.seats.filter((seat) => {
+      return !order.seats.some(
+        (bookedSeat) =>
+          bookedSeat.section === seat.section &&
+          bookedSeat.row === seat.row &&
+          bookedSeat.seatNumber === seat.seatNumber
+      );
+    });
+
+    const ticketsSoldCount = order.seats.length;
+
+    event.seats = remainingSeats;
+    event.ticketSold += ticketsSoldCount;
+
+    await event.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Payment confirmed, seats booked." });
+  } catch (error) {
+    console.error("Confirm Payment error:", error);
+    res.status(500).json({ message: "Internal Server Error", error });
   }
 };
 
-// Normal payment function for testing purpose
-// const createPayment = async (req, res) => {
-//   try {
-//     const { amount, ticketId, userId } = req.body;
-//     if (!amount) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Please provide amount",
-//       });
-//     }
-//     const paymentIntent = await stripe.paymentIntents.create({
-//       amount: amount,
-//       currency: "usd",
-//       payment_method_types: ["card"],
-//     });
-//     return res.status(200).json({
-//       clientSecret: paymentIntent.client_secret,
-//       success: true,
-//       message: "Payment intent created successfully",
-//     });
-//   } catch (error) {
-//     console.log("Error in paymentcontroller :", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error",
-//       error: error.message,
-//     });
-//   }
-// };
-
-export { confirmPayment, createTicketPayment };
+export { confirmPayment, createPayment };

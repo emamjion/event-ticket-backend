@@ -5,6 +5,7 @@ import {
   deleteSellerProfile,
   getMySellerProfile,
   getSellerProfileById,
+  getSoldTickets,
   updatePaymentInfo,
   updateSellerProfile,
 } from "../controllers/sellerController.js";
@@ -31,5 +32,8 @@ sellerRouter.put(
   verifySeller,
   updatePaymentInfo
 );
+
+// route for sold tickets
+sellerRouter.get("/sold-tickets", verifyToken, getSoldTickets);
 
 export default sellerRouter;

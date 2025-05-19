@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import UserModel from "../models/userModel.js";
 
@@ -189,10 +190,45 @@ const updatePaymentInfo = async (req, res) => {
   }
 };
 
+// function to sold tickets for seller
+const getSoldTickets = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Seller paowa
+    const seller = await SellerModel.findOne({ userId });
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found",
+      });
+    }
+
+    // Seller-er sold tickets order model theke ana
+    const soldTickets = await OrderModel.find({ sellerId: seller._id })
+      .populate("buyerId", "name email")
+      .populate("eventId", "title date")
+      .sort({ orderTime: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Sold tickets fetched successfully",
+      totalSoldTickets: soldTickets.length,
+      soldTickets,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export {
   deleteSellerProfile,
   getMySellerProfile,
   getSellerProfileById,
   updatePaymentInfo,
   updateSellerProfile,
+  getSoldTickets
 };

@@ -55,6 +55,7 @@ const bookSeats = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error });
   }
 };
+
 const getBookingsByBuyer = async (req, res) => {
   const { buyerId } = req.params;
 

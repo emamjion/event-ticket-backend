@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import OrderModel from "../models/orderModel.js";
 
 // const getMyOrders = async (req, res) => {
@@ -25,8 +26,8 @@ import OrderModel from "../models/orderModel.js";
 
 const getMyOrders = async (req, res) => {
   try {
-    const userId = req.user.id; // auth middleware থেকে আসা ইউজার আইডি
-    const objectUserId = new mongoose.Types.ObjectId(userId); // ObjectId তে রূপান্তর
+    const userId = req.user.id;
+    const objectUserId = new mongoose.Types.ObjectId(userId);
 
     const orders = await OrderModel.find({
       buyerId: objectUserId,
@@ -36,6 +37,7 @@ const getMyOrders = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Orders fetched successfully",
+      totalOrders: orders.length,
       data: orders,
     });
   } catch (error) {
@@ -45,8 +47,7 @@ const getMyOrders = async (req, res) => {
       message: error.message,
     });
   }
-}
-
+};
 
 const getSingleOrder = async (req, res) => {
   try {

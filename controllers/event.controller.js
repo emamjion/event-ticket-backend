@@ -80,7 +80,7 @@ const getSellerEvents = async (req, res) => {
   }
 };
 
-// ✅ Update Event
+// Update Event
 const updateEvent = async (req, res) => {
   try {
     const sellerId = await getSellerId(req.user);
@@ -111,7 +111,7 @@ const updateEvent = async (req, res) => {
   }
 };
 
-// ✅ Delete Event
+// Delete Event
 const deleteEvent = async (req, res) => {
   try {
     const sellerId = await getSellerId(req.user);

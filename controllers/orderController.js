@@ -1,11 +1,35 @@
 import OrderModel from "../models/orderModel.js";
 
+// const getMyOrders = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+
+//     const orders = await OrderModel.find({
+//       buyerId: userId,
+//       paymentStatus: "success",
+//     }).sort({ createdAt: -1 });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Orders fetched successfully",
+//       data: orders,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       error: "Failed to fetch orders",
+//       message: error.message,
+//     });
+//   }
+// };
+
 const getMyOrders = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.id; // auth middleware থেকে আসা ইউজার আইডি
+    const objectUserId = new mongoose.Types.ObjectId(userId); // ObjectId তে রূপান্তর
 
     const orders = await OrderModel.find({
-      buyerId: userId,
+      buyerId: objectUserId,
       paymentStatus: "success",
     }).sort({ createdAt: -1 });
 
@@ -21,7 +45,8 @@ const getMyOrders = async (req, res) => {
       message: error.message,
     });
   }
-};
+}
+
 
 const getSingleOrder = async (req, res) => {
   try {

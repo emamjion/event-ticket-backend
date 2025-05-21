@@ -5,6 +5,7 @@ import SellerModel from "../models/sellerModel.js";
 import SellerRequestModel from "../models/sellerRequestModel.js";
 import TicketModel from "../models/ticketModel.js";
 import UserModel from "../models/userModel.js";
+import EventModel from "../models/eventModel.js";
 
 // add new user by admin panel
 const addNewUserByAdmin = async (req, res) => {
@@ -464,12 +465,33 @@ const verifySellerPaymentInfo = async (req, res) => {
   }
 };
 
+// function to get all events
+const getAllEventsForAdmin = async (req, res) => {
+  try {
+    const events = await EventModel.find().sort({ createdAt: -1 }); // newest first
+
+    res.status(200).json({
+      success: true,
+      message: "All events fetched successfully",
+      total: events.length,
+      data: events,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch events",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   approveSellerRequest,
   blockUserById,
   deleteUser,
   denySellerRequest,
+  getAllEventsForAdmin,
   getAllSellers,
   getAllSoldTickets,
   getAllUsers,

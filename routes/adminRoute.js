@@ -5,6 +5,7 @@ import {
   blockUserById,
   deleteUser,
   denySellerRequest,
+  getAllEventsForAdmin,
   getAllSoldTickets,
   getAllUsers,
   getPendingSellerRequests,
@@ -86,6 +87,7 @@ adminRouter.put(
   handleWithdrawalRequest
 );
 
+adminRouter.get("/events", verifyToken, verifyAdmin, getAllEventsForAdmin);
 // get all sellers
 // adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);
 

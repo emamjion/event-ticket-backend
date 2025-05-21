@@ -1,7 +1,7 @@
 import EventModel from "../models/eventModel.js";
 import SellerModel from "../models/sellerModel.js";
 
-// 🔧 Helper to get sellerId based on role
+// Helper to get sellerId based on role
 const getSellerId = async (user) => {
   if (user.role === "seller") {
     const seller = await SellerModel.findOne({ userId: user.id });
@@ -14,7 +14,7 @@ const getSellerId = async (user) => {
   }
 };
 
-// ✅ Create Event
+// Create Event
 const createEvent = async (req, res) => {
   try {
     const sellerId = await getSellerId(req.user);
@@ -68,7 +68,7 @@ const createEvent = async (req, res) => {
   }
 };
 
-// ✅ Get Seller/Admin Events
+// Get Seller/Admin Events
 const getSellerEvents = async (req, res) => {
   try {
     const sellerId = await getSellerId(req.user);

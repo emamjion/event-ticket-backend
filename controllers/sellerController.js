@@ -228,7 +228,7 @@ export {
   deleteSellerProfile,
   getMySellerProfile,
   getSellerProfileById,
+  getSoldTickets,
   updatePaymentInfo,
   updateSellerProfile,
-  getSoldTickets
 };

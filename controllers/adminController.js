@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs";
+import { Parser } from "json2csv";
 import jwt from "jsonwebtoken";
+import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import SellerRequestModel from "../models/sellerRequestModel.js";
 import TicketModel from "../models/ticketModel.js";
 import UserModel from "../models/userModel.js";
-import EventModel from "../models/eventModel.js";
 
 // add new user by admin panel
 const addNewUserByAdmin = async (req, res) => {
@@ -216,13 +217,15 @@ const unblockUserById = async (req, res) => {
 // function to get all sold tickets
 const getAllSoldTickets = async (req, res) => {
   try {
-    const soldTickets = await OrderModel.find({ paymentStatus: "paid" })
-      .populate("userId", "name email")
+    const soldTickets = await OrderModel.find({ paymentStatus: "success" })
+      .populate("buyerId", "name email")
+      .populate("eventId", "title date")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       message: "All sold tickets fetched successfully",
+      totalSoldTickets: soldTickets.length,
       data: soldTickets,
     });
   } catch (error) {
@@ -485,6 +488,104 @@ const getAllEventsForAdmin = async (req, res) => {
   }
 };
 
+// function to view all transactions - simple
+// const getAllTransactions = async (req, res) => {
+//   try {
+//     const transactions = await OrderModel.find()
+//       .populate("buyerId", "name email")
+//       .populate("sellerId", "name email")
+//       .populate("eventId", "title date location")
+//       .sort({ createdAt: -1 });
+
+//     res.status(200).json({
+//       success: true,
+//       total: transactions.length,
+//       data: transactions,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch transactions",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// function to view all transactions - with pagination, search, filter and csv download
+const getAllTransactions = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      paymentStatus,
+      startDate,
+      endDate,
+      format,
+    } = req.query;
+
+    const query = {};
+
+    if (paymentStatus) {
+      query.paymentStatus = paymentStatus;
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    const skip = (page - 1) * limit;
+
+    const transactions = await OrderModel.find(query)
+      .populate("buyerId", "name email")
+      .populate("sellerId", "name email")
+      .populate("eventId", "title date location")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await OrderModel.countDocuments(query);
+
+    // CSV export
+    if (format === "csv") {
+      const fields = [
+        "buyerId.name",
+        "buyerId.email",
+        "sellerId.name",
+        "sellerId.email",
+        "eventId.title",
+        "eventId.date",
+        "paymentStatus",
+        "totalAmount",
+        "quantity",
+        "createdAt",
+      ];
+      const json2csvParser = new Parser({ fields });
+      const csv = json2csvParser.parse(transactions);
+      res.header("Content-Type", "text/csv");
+      res.attachment("transactions.csv");
+      return res.send(csv);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "All transactions fetched successfully",
+      total,
+      totalTransactions: transactions.length,
+      currentPage: Number(page),
+      totalPages: Math.ceil(total / limit),
+      data: transactions,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Transaction fetching failed",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   approveSellerRequest,
@@ -494,6 +595,7 @@ export {
   getAllEventsForAdmin,
   getAllSellers,
   getAllSoldTickets,
+  getAllTransactions,
   getAllUsers,
   getPendingSellerRequests,
   monitorSellerActivity,

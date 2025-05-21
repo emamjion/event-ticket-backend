@@ -7,6 +7,7 @@ import {
   denySellerRequest,
   getAllEventsForAdmin,
   getAllSoldTickets,
+  getAllTransactions,
   getAllUsers,
   getPendingSellerRequests,
   monitorSellerActivity,
@@ -14,6 +15,11 @@ import {
   updateUserRole,
   verifySellerPaymentInfo,
 } from "../controllers/adminController.js";
+import {
+  generateSalesReport,
+  generateTransactionReport,
+  generateUserReport,
+} from "../controllers/generateReports.controller.js";
 import { publishEvent } from "../controllers/publishEvent.controller.js";
 import { handleWithdrawalRequest } from "../controllers/withdrawal.controller.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
@@ -88,6 +94,18 @@ adminRouter.put(
 );
 
 adminRouter.get("/events", verifyToken, verifyAdmin, getAllEventsForAdmin);
+adminRouter.get("/transactions", verifyToken, verifyAdmin, getAllTransactions);
+
+// Generate rports routes
+adminRouter.get("/sales-report", verifyToken, verifyAdmin, generateSalesReport);
+adminRouter.get("/users-report", verifyToken, verifyAdmin, generateUserReport);
+adminRouter.get(
+  "/transactions-report",
+  verifyToken,
+  verifyAdmin,
+  generateTransactionReport
+);
+
 // get all sellers
 // adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);
 

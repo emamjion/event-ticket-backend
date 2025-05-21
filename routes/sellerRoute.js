@@ -34,6 +34,6 @@ sellerRouter.put(
 );
 
 // route for sold tickets
-sellerRouter.get("/sold-tickets", verifyToken, getSoldTickets);
+sellerRouter.get("/sold-tickets", verifyToken, verifySeller, getSoldTickets);
 
 export default sellerRouter;

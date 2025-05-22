@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    profileImg: {
+      type: String,
+      default:
+        "https://res.cloudinary.com/demo/image/upload/v1700000000/default-avatar.png",
+    },
     purchasedTickets: [
       {
         ticketId: mongoose.Schema.Types.ObjectId,

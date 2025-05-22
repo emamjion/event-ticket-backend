@@ -12,6 +12,7 @@ import {
   resetPassword,
   updateProfile,
 } from "../controllers/profileController.js";
+import upload from "../middleware/multer.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const authRouter = express.Router();
@@ -23,7 +24,12 @@ authRouter.post("/logout", logoutUser);
 
 // Profile routes (protected)
 authRouter.get("/profile", verifyToken, getProfile);
-authRouter.put("/profile", verifyToken, updateProfile);
+authRouter.put(
+  "/profile",
+  verifyToken,
+  upload.single("profileImg"),
+  updateProfile
+);
 authRouter.delete("/profile", verifyToken, deleteAccount);
 
 authRouter.put("/change-password", verifyToken, changePassword);

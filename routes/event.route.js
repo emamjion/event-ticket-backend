@@ -10,6 +10,7 @@ import {
   getPublishedEvents,
 } from "../controllers/publishEvent.controller.js";
 
+import upload from "../middleware/multer.js";
 import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -19,6 +20,7 @@ eventRouter.get("/events/:id", getPublishedEventById);
 
 eventRouter.post(
   "/create-event",
+  upload.single("image"),
   verifyToken,
   verifySellerOrAdmin,
   createEvent

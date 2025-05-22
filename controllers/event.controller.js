@@ -1,3 +1,4 @@
+import { v2 as cloudinary } from "cloudinary";
 import EventModel from "../models/eventModel.js";
 import SellerModel from "../models/sellerModel.js";
 
@@ -25,10 +26,19 @@ const createEvent = async (req, res) => {
       date,
       time,
       location,
-      image,
       price,
       ticketsAvailable,
     } = req.body;
+
+    const image = req.file;
+    if (!image) {
+      return res.status(400).json({
+        success: false,
+        message: "Image file is required",
+      });
+    }
+    const result = await cloudinary.uploader.upload(image.path);
+    const imageUrl = result.secure_url;
 
     const existingEvent = await EventModel.findOne({
       title,
@@ -49,7 +59,7 @@ const createEvent = async (req, res) => {
       date,
       time,
       location,
-      image,
+      image: imageUrl,
       price,
       isPublished: false,
       ticketsAvailable,

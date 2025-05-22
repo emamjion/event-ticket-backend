@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import UserModel from "../models/userModel.js";
+import { v2 as cloudinary } from 'cloudinary';
 
 // const createSellerProfile = async (req, res) => {
 //   try {
@@ -43,9 +44,16 @@ const updateSellerProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    const updatedData = {...req.body};
+    const image = req.file;
+    if(image){
+      const result = await cloudinary.uploader.upload(image.path);
+      updatedData.profileImg = result.secure_url;
+    }
+
     const updated = await SellerModel.findOneAndUpdate(
       { userId },
-      { $set: req.body },
+      { $set: updatedData },
       { new: true }
     );
 

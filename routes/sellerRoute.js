@@ -9,6 +9,7 @@ import {
   updatePaymentInfo,
   updateSellerProfile,
 } from "../controllers/sellerController.js";
+import upload from "../middleware/multer.js";
 import verifySeller from "../middleware/verifySeller.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -19,6 +20,7 @@ sellerRouter.patch(
   "/update-profile",
   verifyToken,
   verifySeller,
+  upload.single("profileImg"),
   updateSellerProfile
 );
 sellerRouter.get("/profile", verifyToken, getMySellerProfile);

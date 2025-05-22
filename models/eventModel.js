@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-// Seat Schema
 const seatSchema = new mongoose.Schema({
   section: String,
   row: String,
@@ -8,14 +7,12 @@ const seatSchema = new mongoose.Schema({
   price: Number,
 });
 
-// Ticket Type Schema (assumed structure)
 const ticketTypeSchema = new mongoose.Schema({
   type: { type: String, required: true },
   price: { type: Number, required: true },
   quantity: { type: Number, required: true },
 });
 
-// Main Event Schema
 const eventSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -27,14 +24,12 @@ const eventSchema = new mongoose.Schema(
     price: { type: String, required: true },
 
     isPublished: { type: Boolean, default: false },
-
-    // Tickets and Seats Info
     ticketsAvailable: { type: Number, required: true },
     ticketSold: { type: Number, default: 0 },
 
     ticketTypes: [ticketTypeSchema],
     seats: [seatSchema],
-
+    soldTickets: [seatSchema],
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Seller",
@@ -46,7 +41,6 @@ const eventSchema = new mongoose.Schema(
   }
 );
 
-// Model Export
 const EventModel =
   mongoose.models.Event || mongoose.model("Event", eventSchema);
 

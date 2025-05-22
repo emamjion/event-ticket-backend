@@ -154,7 +154,7 @@ const createPayment = async (req, res) => {
   }
 };
 
-// Confirm Payment: verify payment with Stripe and update order and event
+// first phase of Confirm Payment: verify payment with Stripe and update order and event
 // const confirmPayment = async (req, res) => {
 //   const { orderId } = req.body;
 
@@ -230,6 +230,78 @@ const createPayment = async (req, res) => {
 //   }
 // };
 
+// second phase of confirm payment
+// const confirmPayment = async (req, res) => {
+//   const { orderId } = req.body;
+
+//   if (!orderId) {
+//     return res.status(400).json({ message: "orderId is required." });
+//   }
+
+//   try {
+//     const order = await OrderModel.findById(orderId);
+//     if (!order) {
+//       return res.status(404).json({ message: "Order not found." });
+//     }
+
+//     if (order.paymentStatus === "success") {
+//       return res
+//         .status(400)
+//         .json({ message: "Payment already confirmed for this order." });
+//     }
+
+//     const paymentIntent = await stripe.paymentIntents.retrieve(
+//       order.paymentIntentId
+//     );
+
+//     if (paymentIntent.status !== "succeeded") {
+//       order.paymentStatus = "failed";
+//       await order.save();
+//       return res.status(400).json({
+//         success: false,
+//         message: "Payment not successful.",
+//       });
+//     }
+
+//     order.paymentStatus = "success";
+//     await order.save();
+
+//     await BookingModel.findByIdAndUpdate(order.bookingId, {
+//       status: "success",
+//       isPaid: true,
+//       paymentIntentId: order.paymentIntentId,
+//     });
+
+//     const event = await EventModel.findById(order.eventId);
+//     if (!event) {
+//       return res.status(404).json({ message: "Event not found." });
+//     }
+
+//     const remainingSeats = event.seats.filter((seat) => {
+//       return !order.seats.some(
+//         (bookedSeat) =>
+//           bookedSeat.section === seat.section &&
+//           bookedSeat.row === seat.row &&
+//           bookedSeat.seatNumber === seat.seatNumber
+//       );
+//     });
+
+//     event.seats = remainingSeats;
+//     event.ticketSold += order.seats.length;
+
+//     await event.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Payment confirmed, seats booked.",
+//     });
+//   } catch (error) {
+//     console.error("Confirm Payment error:", error);
+//     res.status(500).json({ message: "Internal Server Error", error });
+//   }
+// };
+
+// third phase of confirm payment
 const confirmPayment = async (req, res) => {
   const { orderId } = req.body;
 
@@ -249,35 +321,39 @@ const confirmPayment = async (req, res) => {
         .json({ message: "Payment already confirmed for this order." });
     }
 
+    // Stripe থেকে paymentIntent retrieve করা
     const paymentIntent = await stripe.paymentIntents.retrieve(
       order.paymentIntentId
     );
 
+    // যদি payment না হয় তাহলে failed হিসেবে সেভ হবে
     if (paymentIntent.status !== "succeeded") {
       order.paymentStatus = "failed";
       await order.save();
-      return res.status(400).json({
-        success: false,
-        message: "Payment not successful.",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Payment not successful." });
     }
 
-    // ✅ সফল পেমেন্ট - অর্ডার ও বুকিং আপডেট করো
+    // Payment সফল হয়েছে
     order.paymentStatus = "success";
     await order.save();
 
+    // Booking Update
     await BookingModel.findByIdAndUpdate(order.bookingId, {
       status: "success",
       isPaid: true,
       paymentIntentId: order.paymentIntentId,
     });
 
+    // Event Update
     const event = await EventModel.findById(order.eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    const remainingSeats = event.seats.filter((seat) => {
+    // বুকড সিটগুলো event.seats থেকে বাদ দেওয়া
+    const updatedSeats = event.seats.filter((seat) => {
       return !order.seats.some(
         (bookedSeat) =>
           bookedSeat.section === seat.section &&
@@ -286,9 +362,16 @@ const confirmPayment = async (req, res) => {
       );
     });
 
-    event.seats = remainingSeats;
-    event.ticketSold += order.seats.length;
+    // soldTickets এ বুকড সিটগুলো যোগ করা
+    const updatedSoldTickets = [...event.soldTickets, ...order.seats];
 
+    // ticketSold কাউন্ট বাড়ানো
+    const ticketsSoldCount = order.seats.length;
+
+    // Event save
+    event.seats = updatedSeats;
+    event.soldTickets = updatedSoldTickets;
+    event.ticketSold += ticketsSoldCount;
     await event.save();
 
     res.status(200).json({
@@ -297,7 +380,9 @@ const confirmPayment = async (req, res) => {
     });
   } catch (error) {
     console.error("Confirm Payment error:", error);
-    res.status(500).json({ message: "Internal Server Error", error });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 

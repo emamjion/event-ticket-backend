@@ -19,6 +19,10 @@ const bookingSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  // code: {
+  //   type: String,
+  //   default: null,
+  // },
   seats: { type: [seatSchema], required: true },
   totalAmount: { type: Number, required: true },
   bookingTime: { type: Date, default: Date.now },

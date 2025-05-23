@@ -6,6 +6,7 @@ import connectDB from "./config/mongodb.js";
 import adminRouter from "./routes/adminRoute.js";
 import authRouter from "./routes/authRoute.js";
 import bookingRouter from "./routes/booking.route.js";
+import couponRouter from "./routes/coupon.route.js";
 import eventRouter from "./routes/event.route.js";
 import orderRouter from "./routes/orderRoute.js";
 import paymentRouter from "./routes/paymentRoute.js";
@@ -47,6 +48,7 @@ app.use("/api/v1/seller-request", sellerRequestRouter);
 app.use("/api/v1/event", eventRouter);
 app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/withdraw", withdrawalRouter);
+app.use("/api/v1/coupons", couponRouter);
 
 // JWT route (optional)
 // app.use("/api", jwtRouter);

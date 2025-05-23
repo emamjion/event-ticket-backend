@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 const couponSchema = new mongoose.Schema(
   {
     sellerId: {
@@ -39,6 +41,8 @@ const couponSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
+    isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

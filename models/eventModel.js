@@ -5,6 +5,11 @@ const seatSchema = new mongoose.Schema({
   row: String,
   seatNumber: Number,
   price: Number,
+  status: {
+    type: String,
+    enum: ["available", "reserved", "sold"],
+    default: "available",
+  },
 });
 
 const ticketTypeSchema = new mongoose.Schema({

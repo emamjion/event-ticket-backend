@@ -5,7 +5,7 @@ const seatSchema = new mongoose.Schema({
   row: String,
   seatNumber: Number,
   price: Number,
-  isBooked: { type: Boolean, default: false }, // seat booked kina check korar jonno
+  isBooked: { type: Boolean, default: false },
 });
 
 const bookingSchema = new mongoose.Schema({
@@ -18,6 +18,20 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
+  },
+  isPaid: {
+    type: Boolean,
+    default: false,
+  },
+  status: {
+    type: String,
+    enum: ["pending", "confirmed", "reserved", "cancelled"],
+    default: "pending",
+  },
+  role: {
+    type: String,
+    enum: ["buyer", "seller"],
+    default: "buyer",
   },
   // code: {
   //   type: String,

@@ -2,11 +2,68 @@ import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 
 // first phase simple booking
+// const bookSeats = async (req, res) => {
+//   const { eventId, buyerId, seats, totalAmount } = req.body;
+
+//   if (!eventId || !buyerId || !seats || seats.length === 0) {
+//     return res.status(400).json({ message: "Missing required fields." });
+//   }
+
+//   try {
+//     const event = await EventModel.findById(eventId);
+
+//     if (!event) {
+//       return res.status(404).json({ message: "Event not found." });
+//     }
+
+//     // Check if seats already booked or locked
+//     const unavailableSeats = seats.filter((requestedSeat) => {
+//       return event.seats.some(
+//         (bookedSeat) =>
+//           bookedSeat.section === requestedSeat.section &&
+//           bookedSeat.row === requestedSeat.row &&
+//           bookedSeat.seatNumber === requestedSeat.seatNumber
+//       );
+//     });
+
+//     if (unavailableSeats.length > 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Some seats are already booked or unavailable.",
+//         unavailableSeats,
+//       });
+//     }
+
+//     // Step 01: Save booking with status pending
+//     const newBooking = new BookingModel({
+//       eventId,
+//       buyerId,
+//       seats,
+//       totalAmount,
+//       isPaid: false,
+//       status: "pending",
+//     });
+
+//     await newBooking.save();
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Booking created, waiting for payment.",
+//       bookingId: newBooking._id,
+//       bookings: newBooking,
+//     });
+//   } catch (error) {
+//     console.error("Booking error:", error);
+//     res.status(500).json({ message: "Internal Server Error", error });
+//   }
+// };
+
+// first phase simple booking but latest
 const bookSeats = async (req, res) => {
   const { eventId, buyerId, seats, totalAmount } = req.body;
 
   if (!eventId || !buyerId || !seats || seats.length === 0) {
-    return res.status(400).json({ message: "Missing required fields." });
+    return res.status(400).json({ message: "Required fields are missing." });
   }
 
   try {
@@ -16,14 +73,17 @@ const bookSeats = async (req, res) => {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    // Check if seats already booked or locked
+    // Check if the requested seats are available
     const unavailableSeats = seats.filter((requestedSeat) => {
-      return event.seats.some(
-        (bookedSeat) =>
-          bookedSeat.section === requestedSeat.section &&
-          bookedSeat.row === requestedSeat.row &&
-          bookedSeat.seatNumber === requestedSeat.seatNumber
+      const seatInEvent = event.seats.find(
+        (seat) =>
+          seat.section === requestedSeat.section &&
+          seat.row === requestedSeat.row &&
+          seat.seatNumber === requestedSeat.seatNumber
       );
+
+      // Seat is unavailable if it doesn't exist or its status is not 'available'
+      return !seatInEvent || seatInEvent.status !== "available";
     });
 
     if (unavailableSeats.length > 0) {
@@ -34,7 +94,23 @@ const bookSeats = async (req, res) => {
       });
     }
 
-    // Step 01: Save booking with status pending
+    // Mark the seats as 'sold' in the event document
+    seats.forEach((seatToBook) => {
+      const seatInEvent = event.seats.find(
+        (seat) =>
+          seat.section === seatToBook.section &&
+          seat.row === seatToBook.row &&
+          seat.seatNumber === seatToBook.seatNumber
+      );
+      if (seatInEvent) {
+        seatInEvent.status = "sold";
+      }
+    });
+
+    // Save the updated event document
+    await event.save();
+
+    // Create a new booking with status 'pending' and payment false
     const newBooking = new BookingModel({
       eventId,
       buyerId,
@@ -42,19 +118,20 @@ const bookSeats = async (req, res) => {
       totalAmount,
       isPaid: false,
       status: "pending",
+      role: "buyer",
     });
 
     await newBooking.save();
 
     return res.status(200).json({
       success: true,
-      message: "Booking created, waiting for payment.",
+      message: "Booking created successfully. Waiting for payment.",
       bookingId: newBooking._id,
-      bookings: newBooking,
+      booking: newBooking,
     });
   } catch (error) {
     console.error("Booking error:", error);
-    res.status(500).json({ message: "Internal Server Error", error });
+    res.status(500).json({ message: "Server error occurred.", error });
   }
 };
 

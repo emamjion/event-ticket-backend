@@ -1,7 +1,7 @@
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 
-// first phase simple booking
+// first phase of booking seat
 // const bookSeats = async (req, res) => {
 //   const { eventId, buyerId, seats, totalAmount } = req.body;
 
@@ -41,7 +41,7 @@ import EventModel from "../models/eventModel.js";
 //       seats,
 //       totalAmount,
 //       isPaid: false,
-//       status: "pending",
+//       status: "pending", // new field
 //     });
 
 //     await newBooking.save();
@@ -50,7 +50,6 @@ import EventModel from "../models/eventModel.js";
 //       success: true,
 //       message: "Booking created, waiting for payment.",
 //       bookingId: newBooking._id,
-//       bookings: newBooking,
 //     });
 //   } catch (error) {
 //     console.error("Booking error:", error);
@@ -58,12 +57,12 @@ import EventModel from "../models/eventModel.js";
 //   }
 // };
 
-// first phase simple booking but latest
+// second phase of booking seat
 const bookSeats = async (req, res) => {
   const { eventId, buyerId, seats, totalAmount } = req.body;
 
   if (!eventId || !buyerId || !seats || seats.length === 0) {
-    return res.status(400).json({ message: "Required fields are missing." });
+    return res.status(400).json({ message: "Missing required fields." });
   }
 
   try {
@@ -73,17 +72,14 @@ const bookSeats = async (req, res) => {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    // Check if the requested seats are available
+    // Check if seats already booked
     const unavailableSeats = seats.filter((requestedSeat) => {
-      const seatInEvent = event.seats.find(
-        (seat) =>
-          seat.section === requestedSeat.section &&
-          seat.row === requestedSeat.row &&
-          seat.seatNumber === requestedSeat.seatNumber
+      return event.seats.some(
+        (bookedSeat) =>
+          bookedSeat.section === requestedSeat.section &&
+          bookedSeat.row === requestedSeat.row &&
+          bookedSeat.seatNumber === requestedSeat.seatNumber
       );
-
-      // Seat is unavailable if it doesn't exist or its status is not 'available'
-      return !seatInEvent || seatInEvent.status !== "available";
     });
 
     if (unavailableSeats.length > 0) {
@@ -94,23 +90,7 @@ const bookSeats = async (req, res) => {
       });
     }
 
-    // Mark the seats as 'sold' in the event document
-    seats.forEach((seatToBook) => {
-      const seatInEvent = event.seats.find(
-        (seat) =>
-          seat.section === seatToBook.section &&
-          seat.row === seatToBook.row &&
-          seat.seatNumber === seatToBook.seatNumber
-      );
-      if (seatInEvent) {
-        seatInEvent.status = "sold";
-      }
-    });
-
-    // Save the updated event document
-    await event.save();
-
-    // Create a new booking with status 'pending' and payment false
+    // Step 01: Save booking with status pending
     const newBooking = new BookingModel({
       eventId,
       buyerId,
@@ -118,103 +98,28 @@ const bookSeats = async (req, res) => {
       totalAmount,
       isPaid: false,
       status: "pending",
-      role: "buyer",
     });
 
     await newBooking.save();
 
+    // ✅ Step 02: Add seats to event's seats array
+    event.seats.push(...seats);
+    event.soldTickets.push(...seats); // optional
+    event.ticketSold += seats.length;
+    event.ticketsAvailable -= seats.length;
+
+    await event.save();
+
     return res.status(200).json({
       success: true,
-      message: "Booking created successfully. Waiting for payment.",
+      message: "Booking created and seats locked. Waiting for payment.",
       bookingId: newBooking._id,
-      booking: newBooking,
     });
   } catch (error) {
     console.error("Booking error:", error);
-    res.status(500).json({ message: "Server error occurred.", error });
+    res.status(500).json({ message: "Internal Server Error", error });
   }
 };
-
-// second phase with coupon code
-// const bookSeats = async (req, res) => {
-//   const { eventId, buyerId, seats, code } = req.body;
-
-//   if (!eventId || !buyerId || !seats || seats.length === 0) {
-//     return res.status(400).json({ message: "Missing required fields." });
-//   }
-
-//   try {
-//     const event = await EventModel.findById(eventId);
-//     if (!event) {
-//       return res.status(404).json({ message: "Event not found." });
-//     }
-
-//     // Check if seats are already booked
-//     const unavailableSeats = seats.filter((s) =>
-//       event.seats.some(
-//         (b) =>
-//           b.section === s.section &&
-//           b.row === s.row &&
-//           b.seatNumber === s.seatNumber
-//       )
-//     );
-
-//     if (unavailableSeats.length > 0) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Some seats are already booked or unavailable.",
-//         unavailableSeats,
-//       });
-//     }
-
-//     // Step 1: Calculate actual total from seat prices
-//     const actualTotalAmount = seats.reduce((sum, seat) => sum + seat.price, 0);
-
-//     // Step 2: Apply coupon if valid
-//     let finalAmount = actualTotalAmount;
-
-//     if (code) {
-//       const coupon = await CouponModel.findOne({
-//         code: code.toUpperCase(),
-//         eventId,
-//         status: "approved",
-//         startDate: { $lte: new Date() },
-//         endDate: { $gte: new Date() },
-//       });
-
-//       if (!coupon) {
-//         return res
-//           .status(400)
-//           .json({ success: false, message: "Invalid or expired coupon code" });
-//       }
-
-//       const discount = (coupon.discountPercentage / 100) * actualTotalAmount;
-//       finalAmount = parseFloat((actualTotalAmount - discount).toFixed(2));
-//     }
-
-//     // Step 3: Save booking
-//     const newBooking = new BookingModel({
-//       eventId,
-//       buyerId,
-//       seats,
-//       totalAmount: finalAmount,
-//       isPaid: false,
-//       status: "pending",
-//       code: code?.toUpperCase() || null,
-//     });
-
-//     await newBooking.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Booking created, waiting for payment.",
-//       bookingId: newBooking._id,
-//       payableAmount: finalAmount,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: "Booking failed", error });
-//   }
-// };
 
 const getBookingsByBuyer = async (req, res) => {
   const { buyerId } = req.params;
@@ -239,4 +144,143 @@ const getBookingsByBuyer = async (req, res) => {
   }
 };
 
-export { bookSeats, getBookingsByBuyer };
+// cancel booking function
+const cancelBooking = async (req, res) => {
+  const { bookingId } = req.params;
+
+  try {
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found." });
+    }
+
+    if (booking.isPaid) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Cannot cancel a paid booking." });
+    }
+
+    if (booking.status === "cancelled") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking already cancelled." });
+    }
+
+    const event = await EventModel.findById(booking.eventId);
+    if (!event) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Event not found." });
+    }
+
+    // Remove the booked seats from event.seats and soldTickets
+    booking.seats.forEach((seat) => {
+      event.seats = event.seats.filter(
+        (s) =>
+          !(
+            s.section === seat.section &&
+            s.row === seat.row &&
+            s.seatNumber === seat.seatNumber
+          )
+      );
+      event.soldTickets = event.soldTickets.filter(
+        (s) =>
+          !(
+            s.section === seat.section &&
+            s.row === seat.row &&
+            s.seatNumber === seat.seatNumber
+          )
+      );
+    });
+
+    // Update ticket counts
+    event.ticketSold -= booking.seats.length;
+    event.ticketsAvailable += booking.seats.length;
+
+    // Update booking status
+    booking.status = "cancelled";
+
+    await Promise.all([event.save(), booking.save()]);
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled and seats unlocked successfully.",
+      data: booking,
+    });
+  } catch (error) {
+    console.error("Cancel Booking Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error,
+    });
+  }
+};
+
+// function to reserve seat by seller
+const reserveSeatsBySeller = async (req, res) => {
+  const { eventId, sellerId, seats } = req.body;
+
+  if (!eventId || !sellerId || !seats || seats.length === 0) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  try {
+    const event = await EventModel.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    // Check if any seat is already booked
+    const unavailableSeats = seats.filter((requestedSeat) => {
+      return event.seats.some(
+        (bookedSeat) =>
+          bookedSeat.section === requestedSeat.section &&
+          bookedSeat.row === requestedSeat.row &&
+          bookedSeat.seatNumber === requestedSeat.seatNumber
+      );
+    });
+
+    if (unavailableSeats.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Some seats are already booked or reserved.",
+        unavailableSeats,
+      });
+    }
+
+    // Save a booking entry for tracking (optional)
+    const reserveBooking = new BookingModel({
+      eventId,
+      buyerId: sellerId, // or use a new field like reservedBy
+      seats,
+      totalAmount: 0, // no cost
+      isPaid: false,
+      status: "reserved",
+    });
+
+    await reserveBooking.save();
+
+    // Lock seats in event
+    event.seats.push(...seats);
+    event.ticketSold += seats.length;
+    event.ticketsAvailable -= seats.length;
+
+    await event.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Seats successfully reserved by seller.",
+      bookingId: reserveBooking._id,
+      data: reserveBooking,
+    });
+  } catch (error) {
+    console.error("Seller seat reserve error:", error);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+export { bookSeats, cancelBooking, getBookingsByBuyer, reserveSeatsBySeller };

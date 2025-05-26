@@ -5,7 +5,7 @@ const seatSchema = new mongoose.Schema({
   row: String,
   seatNumber: Number,
   price: Number,
-  isBooked: { type: Boolean, default: false }, // seat booked kina check korar jonno
+  isBooked: { type: Boolean, default: false },
 });
 
 const bookingSchema = new mongoose.Schema({

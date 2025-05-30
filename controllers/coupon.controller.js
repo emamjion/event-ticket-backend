@@ -23,13 +23,14 @@ const createCoupon = async (req, res) => {
       endDate,
       eventId,
       sellerId: seller._id,
+      status: "approved",
     });
 
     await newCoupon.save();
 
     res.status(201).json({
       success: true,
-      message: "Coupon created successfully and awaiting admin approval",
+      message: "Coupon created successfully",
       coupon: newCoupon,
     });
   } catch (error) {

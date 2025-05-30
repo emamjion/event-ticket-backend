@@ -1,7 +1,7 @@
 import express from "express";
 import {
   applyCoupon,
-  approveCoupon,
+  //   approveCoupon,
   createCoupon,
   deleteCoupon,
   getSellerCoupons,
@@ -10,7 +10,7 @@ import {
   toggleCouponStatus,
   updateCoupon,
 } from "../controllers/coupon.controller.js";
-import verifyAdmin from "../middleware/verifyAdmin.js";
+// import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifySeller from "../middleware/verifySeller.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -34,12 +34,12 @@ couponRouter.patch(
   toggleCouponStatus
 );
 couponRouter.get("/my-coupons", verifyToken, verifySeller, getSellerCoupons);
-couponRouter.put(
-  "/coupon-approve/:id",
-  verifyToken,
-  verifyAdmin,
-  approveCoupon
-);
+// couponRouter.put(
+//   "/coupon-approve/:id",
+//   verifyToken,
+//   verifyAdmin,
+//   approveCoupon
+// );
 couponRouter.post("/apply-coupon", verifyToken, applyCoupon);
 
 export default couponRouter;

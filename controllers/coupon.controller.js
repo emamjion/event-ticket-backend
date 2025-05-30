@@ -1,28 +1,89 @@
 import CouponModel from "../models/coupon.model.js";
 import SellerModel from "../models/sellerModel.js";
 
+// helper function
+const getSellerId = async (user) => {
+  if (user.role === "seller") {
+    const seller = await SellerModel.findOne({ userId: user.id });
+    if (!seller) throw new Error("Seller not found");
+    return seller._id;
+  } else if (user.role === "admin") {
+    return user.id;
+  } else {
+    throw new Error("Unauthorized");
+  }
+};
+
+// create coupon - seller
+// const createCoupon = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const seller = await SellerModel.findOne({ userId });
+
+//     if (!seller) {
+//       return res
+//         .status(403)
+//         .json({ success: false, message: "Unauthorized seller" });
+//     }
+
+//     const { code, discountPercentage, minPrice, startDate, endDate, eventId } =
+//       req.body;
+
+//     const newCoupon = new CouponModel({
+//       code,
+//       discountPercentage,
+//       minPrice,
+//       startDate,
+//       endDate,
+//       eventId,
+//       sellerId: seller._id,
+//       status: "approved",
+//     });
+
+//     await newCoupon.save();
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Coupon created successfully",
+//       coupon: newCoupon,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to create coupon",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// create coupon - seller and admin
 const createCoupon = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const seller = await SellerModel.findOne({ userId });
-
-    if (!seller) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Unauthorized seller" });
-    }
-
-    const { code, discountPercentage, minPrice, startDate, endDate, eventId } =
-      req.body;
-
-    const newCoupon = new CouponModel({
+    const sellerId = await getSellerId(req.user);
+    const {
+      eventId,
       code,
       discountPercentage,
-      minPrice,
+      minPurchaseAmount,
       startDate,
       endDate,
+    } = req.body;
+
+    const existing = await CouponModel.findOne({ code });
+    if (existing) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Coupon code already exists" });
+    }
+
+    const newCoupon = new CouponModel({
+      sellerId,
       eventId,
-      sellerId: seller._id,
+      code,
+      discountPercentage,
+      minPurchaseAmount,
+      startDate,
+      endDate,
       status: "approved",
     });
 
@@ -34,11 +95,7 @@ const createCoupon = async (req, res) => {
       coupon: newCoupon,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create coupon",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -127,46 +184,73 @@ const deleteCoupon = async (req, res) => {
   }
 };
 
-// function to permanent delete coupon
-const permanentDeleteCoupon = async (req, res) => {
+// function to permanent delete coupon - seller
+// const permanentDeleteCoupon = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const seller = await SellerModel.findOne({ userId });
+
+//     if (!seller) {
+//       return res
+//         .status(403)
+//         .json({ success: false, message: "Unauthorized seller" });
+//     }
+
+//     const { id } = req.params;
+//     const coupon = await CouponModel.findById(id);
+
+//     if (!coupon) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Coupon not found" });
+//     }
+
+//     if (coupon.sellerId.toString() !== seller._id.toString()) {
+//       return res.status(403).json({
+//         success: false,
+//         message: "Unauthorized seller for this coupon",
+//       });
+//     }
+
+//     await CouponModel.findByIdAndDelete(id);
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Coupon deleted successfully",
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to delete coupon",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// parmanently deleted coupon - seller and admin
+const permanentlyDeleteCoupon = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const seller = await SellerModel.findOne({ userId });
+    const sellerId = await getSellerId(req.user);
+    const couponId = req.params.id;
 
-    if (!seller) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Unauthorized seller" });
-    }
-
-    const { id } = req.params;
-    const coupon = await CouponModel.findById(id);
+    const coupon = await CouponModel.findOneAndDelete({
+      _id: couponId,
+      sellerId,
+    });
 
     if (!coupon) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Coupon not found" });
-    }
-
-    if (coupon.sellerId.toString() !== seller._id.toString()) {
-      return res.status(403).json({
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized seller for this coupon",
+        message: "Coupon not found or unauthorized",
       });
     }
 
-    await CouponModel.findByIdAndDelete(id);
-
     res.status(200).json({
       success: true,
-      message: "Coupon deleted successfully",
+      message: "Coupon permanently deleted",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete coupon",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -361,7 +445,7 @@ export {
   createCoupon,
   deleteCoupon,
   getSellerCoupons,
-  permanentDeleteCoupon,
+  permanentlyDeleteCoupon,
   restoreCoupon,
   toggleCouponStatus,
   updateCoupon,

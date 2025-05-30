@@ -5,17 +5,24 @@ import {
   createCoupon,
   deleteCoupon,
   getSellerCoupons,
-  permanentDeleteCoupon,
+  permanentlyDeleteCoupon,
   restoreCoupon,
   toggleCouponStatus,
   updateCoupon,
 } from "../controllers/coupon.controller.js";
 // import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifySeller from "../middleware/verifySeller.js";
+import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const couponRouter = express.Router();
-couponRouter.post("/create-coupon", verifyToken, verifySeller, createCoupon);
+// couponRouter.post("/create-coupon", verifyToken, verifySeller, createCoupon);
+couponRouter.post(
+  "/create-coupon",
+  verifyToken,
+  verifySellerOrAdmin,
+  createCoupon
+);
 couponRouter.patch("/update/:id", verifyToken, verifySeller, updateCoupon);
 // soft delete coupon route
 couponRouter.delete("/delete/:id", verifyToken, verifySeller, deleteCoupon);
@@ -23,8 +30,8 @@ couponRouter.delete("/delete/:id", verifyToken, verifySeller, deleteCoupon);
 couponRouter.delete(
   "/permanent-delete/:id",
   verifyToken,
-  verifySeller,
-  permanentDeleteCoupon
+  verifySellerOrAdmin,
+  permanentlyDeleteCoupon
 );
 couponRouter.patch("/restore/:id", verifyToken, verifySeller, restoreCoupon);
 couponRouter.patch(

@@ -23,9 +23,21 @@ couponRouter.post(
   verifySellerOrAdmin,
   createCoupon
 );
-couponRouter.patch("/update/:id", verifyToken, verifySeller, updateCoupon);
+// couponRouter.patch("/update/:id", verifyToken, verifySeller, updateCoupon);
+couponRouter.patch(
+  "/update/:id",
+  verifyToken,
+  verifySellerOrAdmin,
+  updateCoupon
+);
 // soft delete coupon route
-couponRouter.delete("/delete/:id", verifyToken, verifySeller, deleteCoupon);
+// couponRouter.delete("/delete/:id", verifyToken, verifySeller, deleteCoupon);
+couponRouter.delete(
+  "/delete/:id",
+  verifyToken,
+  verifySellerOrAdmin,
+  deleteCoupon
+);
 // permanent delete coupon route
 couponRouter.delete(
   "/permanent-delete/:id",
@@ -40,7 +52,13 @@ couponRouter.patch(
   verifySeller,
   toggleCouponStatus
 );
-couponRouter.get("/my-coupons", verifyToken, verifySeller, getSellerCoupons);
+// couponRouter.get("/my-coupons", verifyToken, verifySeller, getSellerCoupons);
+couponRouter.get(
+  "/my-coupons",
+  verifyToken,
+  verifySellerOrAdmin,
+  getSellerCoupons
+);
 // couponRouter.put(
 //   "/coupon-approve/:id",
 //   verifyToken,

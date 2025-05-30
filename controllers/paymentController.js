@@ -163,23 +163,28 @@ const confirmPayment = async (req, res) => {
   }
 };
 
-// function to cancel paid booking
 // const cancelPaidBooking = async (req, res) => {
-//   const { bookingId } = req.params;
+//   const { bookingId } = req.body;
 
 //   try {
 //     const booking = await BookingModel.findById(bookingId);
-//     if (!booking) return res.status(404).json({ message: "Booking not found" });
+//     console.log("booking: ", booking);
 
-//     if (booking.status === "cancelled")
+//     if (!booking) {
+//       return res.status(404).json({ message: "Booking not found" });
+//     }
+
+//     if (booking.status === "cancelled") {
 //       return res.status(400).json({ message: "Booking already cancelled" });
+//     }
 
-//     if (!booking.isPaid)
+//     if (!booking.isPaid) {
 //       return res
 //         .status(400)
 //         .json({ message: "Booking is not paid. Use unpaid cancel route." });
+//     }
 
-//     // Refund payment
+//     // ✅ Refund payment via Stripe
 //     const refund = await stripe.refunds.create({
 //       payment_intent: booking.paymentIntentId,
 //     });
@@ -188,19 +193,17 @@ const confirmPayment = async (req, res) => {
 //       return res.status(400).json({ message: "Refund failed. Try again." });
 //     }
 
-//     // Remove booked seats from event
+//     // ✅ Update Event (restore seats)
 //     const event = await EventModel.findById(booking.eventId);
-//     if (!event) return res.status(404).json({ message: "Event not found" });
+//     if (!event) {
+//       return res.status(404).json({ message: "Event not found" });
+//     }
 
+//     // Add back the cancelled seats
 //     booking.seats.forEach((seat) => {
-//       event.seats = event.seats.filter(
-//         (s) =>
-//           !(
-//             s.section === seat.section &&
-//             s.row === seat.row &&
-//             s.seatNumber === seat.seatNumber
-//           )
-//       );
+//       event.seats.push(seat); // Restore seat to available seats
+
+//       // Remove from sold tickets
 //       event.soldTickets = event.soldTickets.filter(
 //         (s) =>
 //           !(
@@ -214,6 +217,7 @@ const confirmPayment = async (req, res) => {
 //     event.ticketSold -= booking.seats.length;
 //     event.ticketsAvailable += booking.seats.length;
 
+//     // ✅ Update Booking
 //     booking.status = "cancelled";
 //     booking.isPaid = false;
 
@@ -251,7 +255,6 @@ const cancelPaidBooking = async (req, res) => {
         .json({ message: "Booking is not paid. Use unpaid cancel route." });
     }
 
-    // ✅ Refund payment via Stripe
     const refund = await stripe.refunds.create({
       payment_intent: booking.paymentIntentId,
     });
@@ -260,17 +263,14 @@ const cancelPaidBooking = async (req, res) => {
       return res.status(400).json({ message: "Refund failed. Try again." });
     }
 
-    // ✅ Update Event (restore seats)
     const event = await EventModel.findById(booking.eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // Add back the cancelled seats
     booking.seats.forEach((seat) => {
-      event.seats.push(seat); // Restore seat to available seats
+      event.seats.push(seat);
 
-      // Remove from sold tickets
       event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(
@@ -284,9 +284,9 @@ const cancelPaidBooking = async (req, res) => {
     event.ticketSold -= booking.seats.length;
     event.ticketsAvailable += booking.seats.length;
 
-    // ✅ Update Booking
     booking.status = "cancelled";
     booking.isPaid = false;
+    booking.isTicketAvailable = false;
 
     await Promise.all([event.save(), booking.save()]);
 

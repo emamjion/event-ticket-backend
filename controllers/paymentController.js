@@ -252,7 +252,7 @@ const cancelPaidBooking = async (req, res) => {
     }
 
     // ✅ Refund payment via Stripe
-    const refund = await stripeInstance.refunds.create({
+    const refund = await stripe.refunds.create({
       payment_intent: booking.paymentIntentId,
     });
 

@@ -23,8 +23,16 @@ const bookingSchema = new mongoose.Schema({
   totalAmount: { type: Number, required: true },
   bookingTime: { type: Date, default: Date.now },
   paymentIntentId: String,
+
+  isPaid: { type: Boolean, default: false },
+  status: {
+    type: String,
+    enum: ["confirmed", "cancelled", "pending"],
+    default: "pending",
+  },
 });
 
 const BookingModel =
   mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
+
 export default BookingModel;

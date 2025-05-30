@@ -236,6 +236,7 @@ const cancelPaidBooking = async (req, res) => {
   try {
     const booking = await BookingModel.findById(bookingId);
     console.log("booking: ", booking);
+
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
@@ -251,7 +252,7 @@ const cancelPaidBooking = async (req, res) => {
     }
 
     // ✅ Refund payment via Stripe
-    const refund = await stripe.refunds.create({
+    const refund = await stripeInstance.refunds.create({
       payment_intent: booking.paymentIntentId,
     });
 
@@ -268,6 +269,8 @@ const cancelPaidBooking = async (req, res) => {
     // Add back the cancelled seats
     booking.seats.forEach((seat) => {
       event.seats.push(seat); // Restore seat to available seats
+
+      // Remove from sold tickets
       event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(

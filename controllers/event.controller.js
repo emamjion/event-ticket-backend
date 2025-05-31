@@ -123,7 +123,6 @@ const getSellerEvents = async (req, res) => {
 // };
 
 // update event - seller and admin
-
 const updateEvent = async (req, res) => {
   try {
     const user = req.user;
@@ -203,6 +202,7 @@ const updateEvent = async (req, res) => {
 //   }
 // };
 
+// delete event - seller and admin
 const deleteEvent = async (req, res) => {
   try {
     const user = req.user;

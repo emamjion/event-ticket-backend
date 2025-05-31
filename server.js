@@ -5,6 +5,7 @@ import connectCloudinary from "./config/cloudinary.js";
 import connectDB from "./config/mongodb.js";
 import adminRouter from "./routes/adminRoute.js";
 import authRouter from "./routes/authRoute.js";
+import blogRouter from "./routes/blog.route.js";
 import bookingRouter from "./routes/booking.route.js";
 import couponRouter from "./routes/coupon.route.js";
 import eventRouter from "./routes/event.route.js";
@@ -49,6 +50,7 @@ app.use("/api/v1/event", eventRouter);
 app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/withdraw", withdrawalRouter);
 app.use("/api/v1/coupons", couponRouter);
+app.use("/api/v1/blogs", blogRouter);
 
 // JWT route (optional)
 // app.use("/api", jwtRouter);

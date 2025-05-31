@@ -32,7 +32,7 @@ eventRouter.get(
   verifySellerOrAdmin,
   getSellerEvents
 );
-eventRouter.put("/update/:id", verifyToken, verifySellerOrAdmin, updateEvent);
+eventRouter.put("/update/:id", verifyToken, upload.single('image') , verifySellerOrAdmin, updateEvent);
 eventRouter.delete(
   "/delete/:id",
   verifyToken,
@@ -40,7 +40,12 @@ eventRouter.delete(
   deleteEvent
 );
 
-eventRouter.post("/seats/add-seats", verifyToken, verifySellerOrAdmin, addSeats);
+eventRouter.post(
+  "/seats/add-seats",
+  verifyToken,
+  verifySellerOrAdmin,
+  addSeats
+);
 eventRouter.get("/seats/:eventId", verifyToken, getSeatsByEvent);
 
 export default eventRouter;

@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 import EventModel from "../models/eventModel.js";
 import SellerModel from "../models/sellerModel.js";
 
@@ -90,22 +91,72 @@ const getSellerEvents = async (req, res) => {
   }
 };
 
-// Update Event
+// Update Event - for seller
+// const updateEvent = async (req, res) => {
+//   try {
+//     const sellerId = await getSellerId(req.user);
+//     const eventId = req.params.id;
+
+//     const event = await EventModel.findOne({
+//       _id: eventId,
+//       sellerId,
+//     });
+
+//     if (!event) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Event not found or unauthorized",
+//       });
+//     }
+
+//     Object.assign(event, req.body);
+//     await event.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Event updated successfully",
+//       event,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// update event - seller and admin
+
 const updateEvent = async (req, res) => {
   try {
-    const sellerId = await getSellerId(req.user);
+    const user = req.user;
     const eventId = req.params.id;
 
-    const event = await EventModel.findOne({
-      _id: eventId,
-      sellerId,
-    });
+    if (!req.body && !req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No data provided to update",
+      });
+    }
+
+    let event;
+    if (user.role === "admin") {
+      event = await EventModel.findById(eventId);
+    } else if (user.role === "seller") {
+      const sellerId = await getSellerId(user);
+      event = await EventModel.findOne({ _id: eventId, sellerId });
+    }
 
     if (!event) {
       return res.status(404).json({
         success: false,
         message: "Event not found or unauthorized",
       });
+    }
+
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
+      req.body.image = result.secure_url;
+
+      // Remove temp image from server
+      fs.unlinkSync(req.file.path);
     }
 
     Object.assign(event, req.body);
@@ -117,20 +168,54 @@ const updateEvent = async (req, res) => {
       event,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Update Event Error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-// Delete Event
+// Delete Event - seller
+// const deleteEvent = async (req, res) => {
+//   try {
+//     const sellerId = await getSellerId(req.user);
+//     const eventId = req.params.id;
+
+//     const event = await EventModel.findOneAndDelete({
+//       _id: eventId,
+//       sellerId,
+//     });
+
+//     if (!event) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Event not found or unauthorized",
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Event deleted successfully",
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 const deleteEvent = async (req, res) => {
   try {
-    const sellerId = await getSellerId(req.user);
+    const user = req.user;
     const eventId = req.params.id;
 
-    const event = await EventModel.findOneAndDelete({
-      _id: eventId,
-      sellerId,
-    });
+    let event;
+
+    if (user.role === "admin") {
+      event = await EventModel.findById(eventId);
+    } else if (user.role === "seller") {
+      const sellerId = await getSellerId(user);
+      event = await EventModel.findOne({ _id: eventId, sellerId });
+    }
 
     if (!event) {
       return res.status(404).json({
@@ -138,6 +223,8 @@ const deleteEvent = async (req, res) => {
         message: "Event not found or unauthorized",
       });
     }
+
+    await event.deleteOne();
 
     res.status(200).json({
       success: true,

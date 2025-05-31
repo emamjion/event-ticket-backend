@@ -1,24 +1,28 @@
 import express from "express";
 import {
   bookSeats,
-  cancelBooking,
+  cancelReservedBooking,
   getBookedSeats,
-  // expireOldBookings,
   getBookingsByBuyer,
-  reserveSeatsBySeller,
+  reserveSeatsByStaff,
 } from "../controllers/booking.controller.js";
-import verifySeller from "../middleware/verifySeller.js";
+import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const bookingRouter = express.Router();
 bookingRouter.post("/book", verifyToken, bookSeats);
 bookingRouter.get("/buyer/:buyerId", verifyToken, getBookingsByBuyer);
-bookingRouter.put("/cancel/:bookingId", verifyToken, cancelBooking);
+bookingRouter.put(
+  "/cancel-reserved",
+  verifyToken,
+  verifySellerOrAdmin,
+  cancelReservedBooking
+);
 bookingRouter.post(
   "/reserve-seats",
   verifyToken,
-  verifySeller,
-  reserveSeatsBySeller
+  verifySellerOrAdmin,
+  reserveSeatsByStaff
 );
 bookingRouter.get("/booked-seats/:eventId", verifyToken, getBookedSeats);
 

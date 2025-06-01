@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
+import mongoose from "mongoose";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -237,25 +238,27 @@ const cancelPaidBooking = async (req, res) => {
   }
 };
 
-const getCancelledBookings = async (req, res) => {
-  try {
-    const cancelledBookings = await BookingModel.find({
-      status: "cancelled",
-    }).populate("eventId buyerId");
-    res.status(200).json({
-      success: true,
-      message: `Cancelled booking fetched successufully`,
-      total: cancelledBookings.length,
-      bookings: cancelledBookings,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+const getCancelledOrders = async (req, res) => {
+  const userId = req.user.id;
+  const objectUserId = new mongoose.Types.ObjectId(userId);
+
+  const cancelledOrders = await OrderModel.find({
+    buyerId: objectUserId,
+    paymentStatus: "success",
+    status: "cancelled", // ✅ Cancelled orders
+    isUserVisible: false,
+  }).sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    message: "Cancelled orders fetched successfully",
+    data: cancelledOrders,
+  });
 };
 
 export {
   cancelPaidBooking,
   confirmPayment,
   createPayment,
-  getCancelledBookings,
+  getCancelledOrders,
 };

@@ -4,7 +4,7 @@ import {
   cancelPaidBooking,
   confirmPayment,
   createPayment,
-  getCancelledBookings,
+  getCancelledOrders,
 } from "../controllers/paymentController.js";
 import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
@@ -18,7 +18,7 @@ paymentRouter.get(
   "/cancelled-bookings",
   verifyToken,
   verifySellerOrAdmin,
-  getCancelledBookings
+  getCancelledOrders
 );
 
 export default paymentRouter;

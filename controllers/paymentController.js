@@ -1,8 +1,8 @@
+import mongoose from "mongoose";
 import Stripe from "stripe";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
-import mongoose from "mongoose";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -164,44 +164,47 @@ const confirmPayment = async (req, res) => {
   }
 };
 
+
 const cancelPaidBooking = async (req, res) => {
   const { bookingId } = req.body;
 
   try {
+    // Find the booking by ID
     const booking = await BookingModel.findById(bookingId);
-    console.log("booking: ", booking);
-
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({ message: "Booking not found." });
     }
 
     if (booking.status === "cancelled") {
-      return res.status(400).json({ message: "Booking already cancelled" });
+      return res.status(400).json({ message: "Booking already cancelled." });
     }
 
     if (!booking.isPaid) {
-      return res
-        .status(400)
-        .json({ message: "Booking is not paid. Use unpaid cancel route." });
+      return res.status(400).json({
+        message: "This booking is not paid. Use the unpaid cancel route.",
+      });
     }
 
-    // ⏎ Refund payment
+    // Refund the payment via Stripe
     const refund = await stripe.refunds.create({
       payment_intent: booking.paymentIntentId,
     });
 
     if (refund.status !== "succeeded") {
-      return res.status(400).json({ message: "Refund failed. Try again." });
+      return res
+        .status(400)
+        .json({ message: "Refund failed. Please try again." });
     }
 
-    // ⏎ Restore seats in event
+    // Find the event associated with the booking
     const event = await EventModel.findById(booking.eventId);
     if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+      return res.status(404).json({ message: "Event not found." });
     }
 
+    // Remove seats from soldTickets and restore them to seats with status 'available'
     booking.seats.forEach((seat) => {
-      event.seats.push(seat);
+      // Remove from soldTickets
       event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(
@@ -210,26 +213,46 @@ const cancelPaidBooking = async (req, res) => {
             s.seatNumber === seat.seatNumber
           )
       );
+
+      // Check if seat is already in event.seats
+      const alreadyExists = event.seats.some(
+        (s) =>
+          s.section === seat.section &&
+          s.row === seat.row &&
+          s.seatNumber === seat.seatNumber
+      );
+
+      // If not, push the seat back into available seats
+      if (!alreadyExists) {
+        event.seats.push({
+          ...(seat.toObject?.() || seat),
+          status: "available",
+        });
+      }
     });
 
+    // Update ticket counters
     event.ticketSold -= booking.seats.length;
     event.ticketsAvailable += booking.seats.length;
 
+    // Update booking status and visibility
     booking.status = "cancelled";
     booking.isPaid = false;
     booking.isTicketAvailable = false;
     booking.isUserVisible = false;
 
+    // Hide the related order from user
     await OrderModel.findOneAndUpdate(
       { bookingId: booking._id },
       { isUserVisible: false }
     );
 
+    // Save both event and booking updates
     await Promise.all([event.save(), booking.save()]);
 
     res.status(200).json({
       success: true,
-      message: "Booking cancelled & refund successful",
+      message: "Booking cancelled and refund successful.",
       refundId: refund.id,
     });
   } catch (err) {
@@ -238,6 +261,9 @@ const cancelPaidBooking = async (req, res) => {
   }
 };
 
+
+
+
 const getCancelledOrders = async (req, res) => {
   const userId = req.user.id;
   const objectUserId = new mongoose.Types.ObjectId(userId);
@@ -245,7 +271,7 @@ const getCancelledOrders = async (req, res) => {
   const cancelledOrders = await OrderModel.find({
     buyerId: objectUserId,
     paymentStatus: "success",
-    status: "cancelled", // ✅ Cancelled orders
+    status: "cancelled",
     isUserVisible: false,
   }).sort({ createdAt: -1 });
 
@@ -256,9 +282,4 @@ const getCancelledOrders = async (req, res) => {
   });
 };
 
-export {
-  cancelPaidBooking,
-  confirmPayment,
-  createPayment,
-  getCancelledOrders,
-};
+export { cancelPaidBooking, confirmPayment, createPayment, getCancelledOrders };

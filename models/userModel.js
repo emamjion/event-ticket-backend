@@ -15,6 +15,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    contactNumber: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
     role: {

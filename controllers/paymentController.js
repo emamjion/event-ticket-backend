@@ -163,77 +163,6 @@ const confirmPayment = async (req, res) => {
   }
 };
 
-// const cancelPaidBooking = async (req, res) => {
-//   const { bookingId } = req.body;
-
-//   try {
-//     const booking = await BookingModel.findById(bookingId);
-//     console.log("booking: ", booking);
-
-//     if (!booking) {
-//       return res.status(404).json({ message: "Booking not found" });
-//     }
-
-//     if (booking.status === "cancelled") {
-//       return res.status(400).json({ message: "Booking already cancelled" });
-//     }
-
-//     if (!booking.isPaid) {
-//       return res
-//         .status(400)
-//         .json({ message: "Booking is not paid. Use unpaid cancel route." });
-//     }
-
-//     // ✅ Refund payment via Stripe
-//     const refund = await stripe.refunds.create({
-//       payment_intent: booking.paymentIntentId,
-//     });
-
-//     if (refund.status !== "succeeded") {
-//       return res.status(400).json({ message: "Refund failed. Try again." });
-//     }
-
-//     // ✅ Update Event (restore seats)
-//     const event = await EventModel.findById(booking.eventId);
-//     if (!event) {
-//       return res.status(404).json({ message: "Event not found" });
-//     }
-
-//     // Add back the cancelled seats
-//     booking.seats.forEach((seat) => {
-//       event.seats.push(seat); // Restore seat to available seats
-
-//       // Remove from sold tickets
-//       event.soldTickets = event.soldTickets.filter(
-//         (s) =>
-//           !(
-//             s.section === seat.section &&
-//             s.row === seat.row &&
-//             s.seatNumber === seat.seatNumber
-//           )
-//       );
-//     });
-
-//     event.ticketSold -= booking.seats.length;
-//     event.ticketsAvailable += booking.seats.length;
-
-//     // ✅ Update Booking
-//     booking.status = "cancelled";
-//     booking.isPaid = false;
-
-//     await Promise.all([event.save(), booking.save()]);
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Booking cancelled & refund successful",
-//       refundId: refund.id,
-//     });
-//   } catch (err) {
-//     console.error("Refund Error:", err);
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// };
-
 const cancelPaidBooking = async (req, res) => {
   const { bookingId } = req.body;
 
@@ -255,6 +184,7 @@ const cancelPaidBooking = async (req, res) => {
         .json({ message: "Booking is not paid. Use unpaid cancel route." });
     }
 
+    // ⏎ Refund payment
     const refund = await stripe.refunds.create({
       payment_intent: booking.paymentIntentId,
     });
@@ -263,6 +193,7 @@ const cancelPaidBooking = async (req, res) => {
       return res.status(400).json({ message: "Refund failed. Try again." });
     }
 
+    // ⏎ Restore seats in event
     const event = await EventModel.findById(booking.eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
@@ -270,7 +201,6 @@ const cancelPaidBooking = async (req, res) => {
 
     booking.seats.forEach((seat) => {
       event.seats.push(seat);
-
       event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(
@@ -287,6 +217,12 @@ const cancelPaidBooking = async (req, res) => {
     booking.status = "cancelled";
     booking.isPaid = false;
     booking.isTicketAvailable = false;
+    booking.isUserVisible = false;
+
+    await OrderModel.findOneAndUpdate(
+      { bookingId: booking._id },
+      { isUserVisible: false }
+    );
 
     await Promise.all([event.save(), booking.save()]);
 
@@ -301,4 +237,25 @@ const cancelPaidBooking = async (req, res) => {
   }
 };
 
-export { cancelPaidBooking, confirmPayment, createPayment };
+const getCancelledBookings = async (req, res) => {
+  try {
+    const cancelledBookings = await BookingModel.find({
+      status: "cancelled",
+    }).populate("eventId buyerId");
+    res.status(200).json({
+      success: true,
+      message: `Cancelled booking fetched successufully`,
+      total: cancelledBookings.length,
+      bookings: cancelledBookings,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export {
+  cancelPaidBooking,
+  confirmPayment,
+  createPayment,
+  getCancelledBookings,
+};

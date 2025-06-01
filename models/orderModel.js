@@ -39,6 +39,10 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    isUserVisible: {
+      type: Boolean,
+      default: true,
+    },
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Seller",

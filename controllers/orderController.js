@@ -32,6 +32,7 @@ const getMyOrders = async (req, res) => {
     const orders = await OrderModel.find({
       buyerId: objectUserId,
       paymentStatus: "success",
+      isUserVisible: true,
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -54,7 +55,11 @@ const getSingleOrder = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const order = await OrderModel.findOne({ _id: id, buyerId: userId });
+    const order = await OrderModel.findOne({
+      _id: id,
+      buyerId: userId,
+      isUserVisible: true,
+    });
 
     if (!order) {
       return res.status(404).json({

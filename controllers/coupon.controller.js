@@ -420,7 +420,14 @@ const getSellerCoupons = async (req, res) => {
       sellerId,
       isDeleted: false,
     }).populate("eventId", "name");
-    res.status(200).json({ success: true, total: coupons.length, coupons });
+    res
+      .status(200)
+      .json({
+        success: true,
+        total: coupons.length,
+        message: "Coupons fetched successfully",
+        coupons,
+      });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

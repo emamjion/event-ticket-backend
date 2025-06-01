@@ -164,47 +164,44 @@ const confirmPayment = async (req, res) => {
   }
 };
 
-
 const cancelPaidBooking = async (req, res) => {
   const { bookingId } = req.body;
 
   try {
-    // Find the booking by ID
     const booking = await BookingModel.findById(bookingId);
+    console.log("booking: ", booking);
+
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found." });
+      return res.status(404).json({ message: "Booking not found" });
     }
 
     if (booking.status === "cancelled") {
-      return res.status(400).json({ message: "Booking already cancelled." });
+      return res.status(400).json({ message: "Booking already cancelled" });
     }
 
     if (!booking.isPaid) {
-      return res.status(400).json({
-        message: "This booking is not paid. Use the unpaid cancel route.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Booking is not paid. Use unpaid cancel route." });
     }
 
-    // Refund the payment via Stripe
+    // ⏎ Refund payment
     const refund = await stripe.refunds.create({
       payment_intent: booking.paymentIntentId,
     });
 
     if (refund.status !== "succeeded") {
-      return res
-        .status(400)
-        .json({ message: "Refund failed. Please try again." });
+      return res.status(400).json({ message: "Refund failed. Try again." });
     }
 
-    // Find the event associated with the booking
+    // ⏎ Restore seats in event
     const event = await EventModel.findById(booking.eventId);
     if (!event) {
-      return res.status(404).json({ message: "Event not found." });
+      return res.status(404).json({ message: "Event not found" });
     }
 
-    // Remove seats from soldTickets and restore them to seats with status 'available'
     booking.seats.forEach((seat) => {
-      // Remove from soldTickets
+      event.seats.push(seat);
       event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(
@@ -213,46 +210,26 @@ const cancelPaidBooking = async (req, res) => {
             s.seatNumber === seat.seatNumber
           )
       );
-
-      // Check if seat is already in event.seats
-      const alreadyExists = event.seats.some(
-        (s) =>
-          s.section === seat.section &&
-          s.row === seat.row &&
-          s.seatNumber === seat.seatNumber
-      );
-
-      // If not, push the seat back into available seats
-      if (!alreadyExists) {
-        event.seats.push({
-          ...(seat.toObject?.() || seat),
-          status: "available",
-        });
-      }
     });
 
-    // Update ticket counters
     event.ticketSold -= booking.seats.length;
     event.ticketsAvailable += booking.seats.length;
 
-    // Update booking status and visibility
     booking.status = "cancelled";
     booking.isPaid = false;
     booking.isTicketAvailable = false;
     booking.isUserVisible = false;
 
-    // Hide the related order from user
     await OrderModel.findOneAndUpdate(
       { bookingId: booking._id },
       { isUserVisible: false }
     );
 
-    // Save both event and booking updates
     await Promise.all([event.save(), booking.save()]);
 
     res.status(200).json({
       success: true,
-      message: "Booking cancelled and refund successful.",
+      message: "Booking cancelled & refund successful",
       refundId: refund.id,
     });
   } catch (err) {
@@ -260,9 +237,6 @@ const cancelPaidBooking = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
-
-
 
 const getCancelledOrders = async (req, res) => {
   const userId = req.user.id;

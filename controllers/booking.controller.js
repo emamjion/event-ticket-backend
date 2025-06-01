@@ -295,7 +295,7 @@ const reserveSeatsByStaff = async (req, res) => {
   }
 };
 
-// Get all booked seats for a specific event
+// Get all booked/reserved (excluding cancelled) seats for a specific event
 const getBookedSeats = async (req, res) => {
   const { eventId } = req.params;
 
@@ -308,17 +308,19 @@ const getBookedSeats = async (req, res) => {
       });
     }
 
-    // Fetch all bookings (paid + reserved) for this event
-    const bookings = await BookingModel.find({ eventId });
+    // Only fetch bookings that are not cancelled
+    const bookings = await BookingModel.find({
+      eventId,
+      status: { $ne: "cancelled" }, // Exclude cancelled bookings
+    });
 
-    // Create a combined seat list with status
     const seatMap = [];
 
     bookings.forEach((booking) => {
       booking.seats.forEach((seat) => {
         seatMap.push({
           ...seat.toObject(),
-          status: booking.status, // 'booked', 'reserved', 'cancelled'
+          status: booking.status, // 'booked' or 'reserved'
           isPaid: booking.isPaid,
         });
       });

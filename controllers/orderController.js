@@ -1,29 +1,6 @@
 import mongoose from "mongoose";
 import OrderModel from "../models/orderModel.js";
 
-// const getMyOrders = async (req, res) => {
-//   try {
-//     const userId = req.user.id;
-
-//     const orders = await OrderModel.find({
-//       buyerId: userId,
-//       paymentStatus: "success",
-//     }).sort({ createdAt: -1 });
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Orders fetched successfully",
-//       data: orders,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       error: "Failed to fetch orders",
-//       message: error.message,
-//     });
-//   }
-// };
-
 const getMyOrders = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -31,8 +8,11 @@ const getMyOrders = async (req, res) => {
 
     const orders = await OrderModel.find({
       buyerId: objectUserId,
-      paymentStatus: "success",
       isUserVisible: true,
+      $or: [
+        { paymentStatus: "success" },
+        { paymentStatus: "pending", totalAmount: 0 },
+      ],
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -59,6 +39,10 @@ const getSingleOrder = async (req, res) => {
       _id: id,
       buyerId: userId,
       isUserVisible: true,
+      $or: [
+        { paymentStatus: "success" },
+        { paymentStatus: "pending", totalAmount: 0 },
+      ],
     });
 
     if (!order) {

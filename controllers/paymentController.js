@@ -194,15 +194,15 @@ const cancelPaidBooking = async (req, res) => {
       return res.status(400).json({ message: "Refund failed. Try again." });
     }
 
-    // ⏎ Restore seats in event
+    // ⏎ Fetch event
     const event = await EventModel.findById(booking.eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    // ⏎ Remove cancelled seats from event.seats
     booking.seats.forEach((seat) => {
-      event.seats.push(seat);
-      event.soldTickets = event.soldTickets.filter(
+      event.seats = event.seats.filter(
         (s) =>
           !(
             s.section === seat.section &&
@@ -211,6 +211,17 @@ const cancelPaidBooking = async (req, res) => {
           )
       );
     });
+
+    // ⏎ Also remove from soldTickets
+    event.soldTickets = event.soldTickets.filter(
+      (s) =>
+        !booking.seats.some(
+          (b) =>
+            b.section === s.section &&
+            b.row === s.row &&
+            b.seatNumber === s.seatNumber
+        )
+    );
 
     event.ticketSold -= booking.seats.length;
     event.ticketsAvailable += booking.seats.length;

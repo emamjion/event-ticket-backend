@@ -36,10 +36,12 @@ const publishEvent = async (req, res) => {
 // get publish ticket
 const getPublishedEvents = async (req, res) => {
   try {
-    
-    const events = await EventModel.find({ isPublished: true }).sort({
-      date: 1,
-    }).populate("sellerId", "shopName email contactNumber");
+    const events = await EventModel.find({ isPublished: true })
+      .sort({
+        date: 1,
+      })
+      .populate("sellerId", "shopName email contactNumber");
+    console.log("events: ", events);
 
     res.status(200).json({
       success: true,

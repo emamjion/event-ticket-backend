@@ -1,5 +1,6 @@
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
+import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 
 // helper function
@@ -15,7 +16,6 @@ const getSellerId = async (user) => {
   }
 };
 
-// Book seats (Phase 2)
 const bookSeats = async (req, res) => {
   const { eventId, buyerId, seats, totalAmount } = req.body;
 
@@ -61,6 +61,56 @@ const bookSeats = async (req, res) => {
     event.ticketsAvailable -= seats.length;
 
     await event.save();
+
+    // 🔔 Auto cancel booking after 10 minutes if not paid
+    setTimeout(async () => {
+      const stillPending = await BookingModel.findById(newBooking._id);
+
+      if (stillPending && !stillPending.isPaid) {
+        console.log("⏱️ Auto cancelling unpaid booking: ", newBooking._id);
+
+        // 1. Cancel the booking
+        stillPending.status = "cancelled";
+        stillPending.isTicketAvailable = false;
+        stillPending.isUserVisible = false;
+        await stillPending.save();
+
+        // 2. Return the seats to the event
+        const originalEvent = await EventModel.findById(eventId);
+        if (originalEvent) {
+          stillPending.seats.forEach((seat) => {
+            originalEvent.seats = originalEvent.seats.filter(
+              (s) =>
+                !(
+                  s.section === seat.section &&
+                  s.row === seat.row &&
+                  s.seatNumber === seat.seatNumber
+                )
+            );
+
+            originalEvent.soldTickets = originalEvent.soldTickets.filter(
+              (s) =>
+                !(
+                  s.section === seat.section &&
+                  s.row === seat.row &&
+                  s.seatNumber === seat.seatNumber
+                )
+            );
+          });
+
+          originalEvent.ticketSold -= stillPending.seats.length;
+          originalEvent.ticketsAvailable += stillPending.seats.length;
+
+          await originalEvent.save();
+        }
+
+        // 3. Hide from order table
+        await OrderModel.findOneAndUpdate(
+          { bookingId: stillPending._id },
+          { isUserVisible: false }
+        );
+      }
+    }, 10 * 60 * 1000); // 10 minutes in milliseconds
 
     res.status(200).json({
       success: true,
@@ -234,6 +284,8 @@ const cancelReservedBooking = async (req, res) => {
 
 const reserveSeatsByStaff = async (req, res) => {
   const { eventId, seats } = req.body;
+
+  console.log("Request body: ", req.body);
 
   if (!eventId || !Array.isArray(seats) || seats.length === 0) {
     return res.status(400).json({ message: "Missing or invalid fields." });

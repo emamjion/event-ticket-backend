@@ -1,5 +1,20 @@
 import mongoose from "mongoose";
+import BookingModel from "../models/booking.model.js";
 import OrderModel from "../models/orderModel.js";
+import SellerModel from "../models/sellerModel.js";
+
+// helper function
+const getSellerId = async (user) => {
+  if (user.role === "seller") {
+    const seller = await SellerModel.findOne({ userId: user.id });
+    if (!seller) throw new Error("Seller not found");
+    return seller._id;
+  } else if (user.role === "admin") {
+    return user.id;
+  } else {
+    throw new Error("Unauthorized");
+  }
+};
 
 const getMyOrders = async (req, res) => {
   try {
@@ -66,4 +81,31 @@ const getSingleOrder = async (req, res) => {
   }
 };
 
-export { getMyOrders, getSingleOrder };
+// get my reservation
+const getMyReservations = async (req, res) => {
+  try {
+    const user = req.user;
+    const sellerId = await getSellerId(user);
+
+    const bookings = await BookingModel.find({
+      buyerId: new mongoose.Types.ObjectId(sellerId),
+      isPaid: false,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Reserved bookings fetched successfully",
+      total: bookings.length,
+      data: bookings,
+    });
+  } catch (error) {
+    console.error("Reservation fetch error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch reserved bookings",
+      message: error.message,
+    });
+  }
+};
+
+export { getMyOrders, getMyReservations, getSingleOrder };

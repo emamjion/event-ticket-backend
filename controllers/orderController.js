@@ -16,30 +16,53 @@ const getSellerId = async (user) => {
   }
 };
 
+// get orders - seller/admin and buyer combine
 const getMyOrders = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const objectUserId = new mongoose.Types.ObjectId(userId);
+    const user = req.user;
+    const objectUserId = new mongoose.Types.ObjectId(user.id);
 
-    const orders = await OrderModel.find({
-      buyerId: objectUserId,
-      isUserVisible: true,
-      $or: [
-        { paymentStatus: "success" },
-        { paymentStatus: "pending", totalAmount: 0 },
-      ],
-    }).sort({ createdAt: -1 });
+    let orders = [];
+
+    // If user is buyer (normal user)
+    if (user.role === "buyer") {
+      orders = await OrderModel.find({
+        buyerId: objectUserId,
+        isUserVisible: true,
+        $or: [
+          { paymentStatus: "success" },
+          { paymentStatus: "pending", totalAmount: 0 },
+        ],
+      }).sort({ createdAt: -1 });
+    }
+
+    // If user is seller/admin → fetch reserved bookings
+    if (user.role === "seller" || user.role === "admin") {
+      const sellerId = await getSellerId(user);
+      const reservations = await BookingModel.find({
+        buyerId: new mongoose.Types.ObjectId(sellerId),
+        isPaid: false,
+      }).sort({ createdAt: -1 });
+
+      const formattedReservations = reservations.map((item) => ({
+        ...item.toObject(),
+        isReservation: true, // frontend can use this
+      }));
+
+      orders = [...orders, ...formattedReservations];
+    }
 
     res.status(200).json({
       success: true,
-      message: "Orders fetched successfully",
+      message: "Orders and reservations fetched successfully",
       totalOrders: orders.length,
       data: orders,
     });
   } catch (error) {
+    console.error("getMyOrders error:", error);
     res.status(500).json({
       success: false,
-      error: "Failed to fetch orders",
+      error: "Failed to fetch orders/reservations",
       message: error.message,
     });
   }
@@ -81,31 +104,31 @@ const getSingleOrder = async (req, res) => {
   }
 };
 
-// get my reservation
-const getMyReservations = async (req, res) => {
-  try {
-    const user = req.user;
-    const sellerId = await getSellerId(user);
+// get my reservation - seller/admin
+// const getMyReservations = async (req, res) => {
+//   try {
+//     const user = req.user;
+//     const sellerId = await getSellerId(user);
 
-    const bookings = await BookingModel.find({
-      buyerId: new mongoose.Types.ObjectId(sellerId),
-      isPaid: false,
-    }).sort({ createdAt: -1 });
+//     const bookings = await BookingModel.find({
+//       buyerId: new mongoose.Types.ObjectId(sellerId),
+//       isPaid: false,
+//     }).sort({ createdAt: -1 });
 
-    res.status(200).json({
-      success: true,
-      message: "Reserved bookings fetched successfully",
-      total: bookings.length,
-      data: bookings,
-    });
-  } catch (error) {
-    console.error("Reservation fetch error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch reserved bookings",
-      message: error.message,
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       message: "Reserved bookings fetched successfully",
+//       total: bookings.length,
+//       data: bookings,
+//     });
+//   } catch (error) {
+//     console.error("Reservation fetch error:", error);
+//     res.status(500).json({
+//       success: false,
+//       error: "Failed to fetch reserved bookings",
+//       message: error.message,
+//     });
+//   }
+// };
 
-export { getMyOrders, getMyReservations, getSingleOrder };
+export { getMyOrders, getSingleOrder };

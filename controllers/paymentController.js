@@ -6,6 +6,18 @@ import OrderModel from "../models/orderModel.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+const getSellerId = async (user) => {
+  if (user.role === "seller") {
+    const seller = await SellerModel.findOne({ userId: user.id });
+    if (!seller) throw new Error("Seller not found");
+    return seller._id;
+  } else if (user.role === "admin") {
+    return user.id;
+  } else {
+    throw new Error("Unauthorized");
+  }
+};
+
 // Create Payment: create Stripe payment intent and order
 
 const createPayment = async (req, res) => {

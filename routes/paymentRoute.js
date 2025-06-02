@@ -1,7 +1,7 @@
 import express from "express";
 
 import {
-  cancelPaidBooking,
+  cancelBooking,
   confirmPayment,
   createPayment,
   getCancelledOrders,
@@ -13,7 +13,7 @@ const paymentRouter = express.Router();
 
 paymentRouter.post("/create-payment", verifyToken, createPayment);
 paymentRouter.post("/confirm-payment", verifyToken, confirmPayment);
-paymentRouter.post("/booking/cancel", verifyToken, cancelPaidBooking);
+paymentRouter.post("/booking/cancel", verifyToken, cancelBooking);
 paymentRouter.get(
   "/cancelled-bookings",
   verifyToken,

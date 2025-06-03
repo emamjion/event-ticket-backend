@@ -131,4 +131,38 @@ const getSingleOrder = async (req, res) => {
 //   }
 // };
 
-export { getMyOrders, getSingleOrder };
+const getMyReservations = async (req, res) => {
+  try {
+    const user = req.user;
+    const sellerId = await getSellerId(user); // current logged-in seller/admin ID
+
+    // Step 1: Cancelled booking gulo database theke completely delete kore dicchi
+    await BookingModel.deleteMany({
+      buyerId: new mongoose.Types.ObjectId(sellerId),
+      status: "cancelled",
+    });
+
+    // Step 2: Active reservation gulo fetch kortesi, jeigulo cancelled na
+    const bookings = await BookingModel.find({
+      buyerId: new mongoose.Types.ObjectId(sellerId),
+      isPaid: false,
+      status: "reserved",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Reserved bookings fetched successfully",
+      total: bookings.length,
+      data: bookings,
+    });
+  } catch (error) {
+    console.error("Reservation fetch error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch reserved bookings",
+      message: error.message,
+    });
+  }
+};
+
+export { getMyOrders, getMyReservations, getSingleOrder };

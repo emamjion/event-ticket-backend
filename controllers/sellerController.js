@@ -1,8 +1,8 @@
+import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import UserModel from "../models/userModel.js";
-import { v2 as cloudinary } from 'cloudinary';
 
 // const createSellerProfile = async (req, res) => {
 //   try {
@@ -44,9 +44,9 @@ const updateSellerProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const updatedData = {...req.body};
+    const updatedData = { ...req.body };
     const image = req.file;
-    if(image){
+    if (image) {
       const result = await cloudinary.uploader.upload(image.path);
       updatedData.profileImg = result.secure_url;
     }
@@ -76,14 +76,44 @@ const updateSellerProfile = async (req, res) => {
 };
 
 // function to get seller profile - self
+// const getMySellerProfile = async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     console.log("user id:", userId);
+
+//     const profile = await SellerModel.findOne({ userId }).populate(
+//       "userId",
+//       "name"
+//     );
+
+//     if (!profile) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Seller profile not found" });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Seller profile fetched successfully",
+//       profile,
+//     });
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .json({ success: false, message: "Server error", error: error.message });
+//   }
+// };
+
 const getMySellerProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id); // Convert string to ObjectId
 
     const profile = await SellerModel.findOne({ userId }).populate(
       "userId",
       "name"
     );
+
+    console.log("profile", profile);
 
     if (!profile) {
       return res

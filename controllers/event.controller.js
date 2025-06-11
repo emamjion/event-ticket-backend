@@ -27,9 +27,13 @@ const createEvent = async (req, res) => {
       date,
       time,
       location,
-      price,
-      ticketsAvailable,
+      contactNumber,
+      email,
+      priceRange,
     } = req.body;
+
+    const parsedPriceRange =
+      typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
 
     const image = req.file;
     if (!image) {
@@ -38,6 +42,7 @@ const createEvent = async (req, res) => {
         message: "Image file is required",
       });
     }
+
     const result = await cloudinary.uploader.upload(image.path);
     const imageUrl = result.secure_url;
 
@@ -61,9 +66,11 @@ const createEvent = async (req, res) => {
       time,
       location,
       image: imageUrl,
-      price,
+      contactNumber,
+      email,
+      priceRange: parsedPriceRange,
       isPublished: false,
-      ticketsAvailable,
+      ticketSold: 0,
       sellerId,
     });
 
@@ -91,38 +98,6 @@ const getSellerEvents = async (req, res) => {
   }
 };
 
-// Update Event - for seller
-// const updateEvent = async (req, res) => {
-//   try {
-//     const sellerId = await getSellerId(req.user);
-//     const eventId = req.params.id;
-
-//     const event = await EventModel.findOne({
-//       _id: eventId,
-//       sellerId,
-//     });
-
-//     if (!event) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Event not found or unauthorized",
-//       });
-//     }
-
-//     Object.assign(event, req.body);
-//     await event.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Event updated successfully",
-//       event,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
-// update event - seller and admin
 const updateEvent = async (req, res) => {
   try {
     const user = req.user;
@@ -150,14 +125,28 @@ const updateEvent = async (req, res) => {
       });
     }
 
+    // ✅ Upload image if provided
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path);
       req.body.image = result.secure_url;
 
-      // Remove temp image from server
+      // Remove temp file
       fs.unlinkSync(req.file.path);
     }
 
+    // ✅ Parse priceRange if it's a string
+    if (req.body.priceRange && typeof req.body.priceRange === "string") {
+      try {
+        req.body.priceRange = JSON.parse(req.body.priceRange);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid priceRange format. Must be a valid JSON object.",
+        });
+      }
+    }
+
+    // ✅ Merge updates
     Object.assign(event, req.body);
     await event.save();
 

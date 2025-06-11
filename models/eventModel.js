@@ -26,10 +26,23 @@ const eventSchema = new mongoose.Schema(
     time: { type: String, required: true },
     location: { type: String, required: true },
     image: { type: String, required: true },
-    price: { type: String, required: true },
+    // price: { type: String, required: true },
+    priceRange: {
+      min: { type: Number, required: true },
+      max: { type: Number, required: true },
+    },
+
+    contactNumber: {
+      type: String,
+      match: [/^\d{10,15}$/, "Please enter a valid contact number"],
+    },
+    email: {
+      type: String,
+      match: [/.+\@.+\..+/, "Please enter a valid email address"],
+    },
 
     isPublished: { type: Boolean, default: false },
-    ticketsAvailable: { type: Number, required: true },
+    // ticketsAvailable: { type: Number, required: true },
     ticketSold: { type: Number, default: 0 },
 
     ticketTypes: [ticketTypeSchema],

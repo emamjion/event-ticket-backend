@@ -62,20 +62,20 @@ const bookSeats = async (req, res) => {
 
     await event.save();
 
-    // 🔔 Auto cancel booking after 10 minutes if not paid
+    // Auto cancel booking after 10 minutes if not paid
     setTimeout(async () => {
       const stillPending = await BookingModel.findById(newBooking._id);
 
       if (stillPending && !stillPending.isPaid) {
         console.log("⏱️ Auto cancelling unpaid booking: ", newBooking._id);
 
-        // 1. Cancel the booking
+        // step:1. Cancel the booking
         stillPending.status = "cancelled";
         stillPending.isTicketAvailable = false;
         stillPending.isUserVisible = false;
         await stillPending.save();
 
-        // 2. Return the seats to the event
+        // step:2. Return the seats to the event
         const originalEvent = await EventModel.findById(eventId);
         if (originalEvent) {
           stillPending.seats.forEach((seat) => {
@@ -104,7 +104,7 @@ const bookSeats = async (req, res) => {
           await originalEvent.save();
         }
 
-        // 3. Hide from order table
+        // step:3. Hide from order table
         await OrderModel.findOneAndUpdate(
           { bookingId: stillPending._id },
           { isUserVisible: false }
@@ -401,9 +401,52 @@ const getBookedSeats = async (req, res) => {
   }
 };
 
+// check seats availability functionality
+const checkSeatsAvailability = async (req, res) => {
+  const { eventId, seats } = req.body;
+
+  if (!eventId || !seats || seats.length === 0) {
+    return res.status(400).json({ message: "Missing required fields." });
+  }
+
+  try {
+    const event = await EventModel.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    const unavailableSeats = seats.filter((requestedSeat) => {
+      return event.seats.some(
+        (bookedSeat) =>
+          bookedSeat.section === requestedSeat.section &&
+          bookedSeat.row === requestedSeat.row &&
+          bookedSeat.seatNumber === requestedSeat.seatNumber
+      );
+    });
+
+    if (unavailableSeats.length > 0) {
+      return res.status(200).json({
+        success: false,
+        message: "Some seats are already booked or reserved.",
+        unavailableSeats,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "All seats are available.",
+    });
+  } catch (error) {
+    console.error("Check seats error:", error);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
 export {
   bookSeats,
   cancelReservedBooking,
+  checkSeatsAvailability,
   getBookedSeats,
   getBookingsByBuyer,
   reserveSeatsByStaff,

@@ -2,6 +2,7 @@ import express from "express";
 import {
   bookSeats,
   cancelReservedBooking,
+  checkSeatsAvailability,
   getBookedSeats,
   getBookingsByBuyer,
   reserveSeatsByStaff,
@@ -25,6 +26,7 @@ bookingRouter.post(
   reserveSeatsByStaff
 );
 bookingRouter.get("/booked-seats/:eventId", verifyToken, getBookedSeats);
+bookingRouter.post("/check-seats", verifyToken, checkSeatsAvailability);
 
 // bookingRouter.patch("/expire-bookings", verifyToken, expireOldBookings);
 

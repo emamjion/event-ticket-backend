@@ -235,7 +235,7 @@ const cancelBooking = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: "Reserved booking cancelled successfully (Admin/Seller)",
+        message: "Reserved booking cancelled successfully",
       });
     }
 

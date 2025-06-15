@@ -29,11 +29,12 @@ const createEvent = async (req, res) => {
       location,
       contactNumber,
       email,
-      priceRange,
+      //   priceRange,
+      price,
     } = req.body;
 
-    const parsedPriceRange =
-      typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
+    // const parsedPriceRange =
+    //   typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
 
     const image = req.file;
     if (!image) {
@@ -68,7 +69,8 @@ const createEvent = async (req, res) => {
       image: imageUrl,
       contactNumber,
       email,
-      priceRange: parsedPriceRange,
+      //   priceRange: parsedPriceRange,
+      price: Number(price),
       isPublished: false,
       ticketSold: 0,
       sellerId,

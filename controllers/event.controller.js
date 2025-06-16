@@ -137,16 +137,16 @@ const updateEvent = async (req, res) => {
     }
 
     // ✅ Parse priceRange if it's a string
-    if (req.body.priceRange && typeof req.body.priceRange === "string") {
-      try {
-        req.body.priceRange = JSON.parse(req.body.priceRange);
-      } catch (err) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid priceRange format. Must be a valid JSON object.",
-        });
-      }
-    }
+    // if (req.body.priceRange && typeof req.body.priceRange === "string") {
+    //   try {
+    //     req.body.priceRange = JSON.parse(req.body.priceRange);
+    //   } catch (err) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: "Invalid priceRange format. Must be a valid JSON object.",
+    //     });
+    //   }
+    // }
 
     // ✅ Merge updates
     Object.assign(event, req.body);

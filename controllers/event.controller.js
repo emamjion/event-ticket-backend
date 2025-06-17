@@ -29,12 +29,12 @@ const createEvent = async (req, res) => {
       location,
       contactNumber,
       email,
-      //   priceRange,
+      priceRange,
       price,
     } = req.body;
 
-    // const parsedPriceRange =
-    //   typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
+    const parsedPriceRange =
+      typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
 
     const image = req.file;
     if (!image) {
@@ -69,7 +69,7 @@ const createEvent = async (req, res) => {
       image: imageUrl,
       contactNumber,
       email,
-      //   priceRange: parsedPriceRange,
+      priceRange: parsedPriceRange,
       price: Number(price),
       isPublished: false,
       ticketSold: 0,
@@ -127,7 +127,6 @@ const updateEvent = async (req, res) => {
       });
     }
 
-    // ✅ Upload image if provided
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path);
       req.body.image = result.secure_url;
@@ -136,19 +135,17 @@ const updateEvent = async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
 
-    // ✅ Parse priceRange if it's a string
-    // if (req.body.priceRange && typeof req.body.priceRange === "string") {
-    //   try {
-    //     req.body.priceRange = JSON.parse(req.body.priceRange);
-    //   } catch (err) {
-    //     return res.status(400).json({
-    //       success: false,
-    //       message: "Invalid priceRange format. Must be a valid JSON object.",
-    //     });
-    //   }
-    // }
+    if (req.body.priceRange && typeof req.body.priceRange === "string") {
+      try {
+        req.body.priceRange = JSON.parse(req.body.priceRange);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid priceRange format. Must be a valid JSON object.",
+        });
+      }
+    }
 
-    // ✅ Merge updates
     Object.assign(event, req.body);
     await event.save();
 

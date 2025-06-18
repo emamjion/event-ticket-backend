@@ -5,7 +5,6 @@ import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
 import SellerRequestModel from "../models/sellerRequestModel.js";
-import TicketModel from "../models/ticketModel.js";
 import UserModel from "../models/userModel.js";
 
 // add new user by admin panel
@@ -411,7 +410,7 @@ const monitorSellerActivity = async (req, res) => {
     }
 
     // TicketModel theke seller er sold tickets gulo fetch kora hocche
-    const soldTickets = await TicketModel.find({
+    const soldTickets = await EventModel.find({
       sellerId: sellerId,
       isSold: true,
     }).populate("buyerId", "name email");

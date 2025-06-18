@@ -13,7 +13,6 @@ import orderRouter from "./routes/orderRoute.js";
 import paymentRouter from "./routes/paymentRoute.js";
 import sellerRequestRouter from "./routes/sellerRequestRoute.js";
 import sellerRouter from "./routes/sellerRoute.js";
-import ticketRouter from "./routes/ticketRoute.js";
 import userRouter from "./routes/userRoute.js";
 import withdrawalRouter from "./routes/withdrawal.route.js";
 // import jwtRouter from "./routes/jwtRoute.js";
@@ -29,8 +28,6 @@ connectDB();
 connectCloudinary();
 
 // app routes
-// tickets
-app.use("/api/v1/ticket", ticketRouter);
 // auth routes
 app.use("/api/v1/auth", authRouter);
 // user routes

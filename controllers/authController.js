@@ -50,7 +50,7 @@ import { createToken } from "../utils/jwtToken.js";
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, contactNumber } = req.body;
 
     // Check if user already exists
     const existingUser = await UserModel.findOne({ email });
@@ -65,12 +65,11 @@ const createUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user with default role = buyer
     const newUser = new UserModel({
       name,
       email,
       password: hashedPassword,
-      // role: "buyer",
+      contactNumber,
     });
 
     await newUser.save();
@@ -84,6 +83,7 @@ const createUser = async (req, res) => {
         email: newUser.email,
         role: newUser.role,
         password: "*****",
+        contactNumber: contactNumber,
       },
     });
   } catch (error) {

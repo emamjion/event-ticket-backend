@@ -131,7 +131,7 @@ const updateEvent = async (req, res) => {
       const result = await cloudinary.uploader.upload(req.file.path);
       req.body.image = result.secure_url;
 
-      // Remove temp file
+
       fs.unlinkSync(req.file.path);
     }
 

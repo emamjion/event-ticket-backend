@@ -73,7 +73,7 @@ const createPayment = async (req, res) => {
       seats: booking.seats,
       quantity,
       totalAmount: booking.totalAmount,
-      paymentStatus: "pending",
+      paymentStatus: "success",
       paymentIntentId: paymentIntent.id,
     });
 

@@ -120,14 +120,14 @@ const confirmPayment = async (req, res) => {
     booking.status = "success";
     await booking.save();
 
-    // 3. Create an Order
+    // 3. Manually set paymentStatus to "success" in Order
     const orderData = {
       bookingId: booking._id,
       buyerId: booking.buyerId,
       eventId: booking.eventId,
       seats: booking.seats,
       totalAmount: booking.totalAmount,
-      paymentStatus: "success",
+      paymentStatus: "success", // Force set success
       paymentIntentId: booking.paymentIntentId,
       sellerId: req.user?._id,
       quantity: booking.seats.length,
@@ -160,60 +160,28 @@ const cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found." });
     }
 
-    // 🧾 Seller/Admin Logic for reserved booking (unpaid)
-    if ((user.role === "admin" || user.role === "seller") && !booking.isPaid) {
-      const sellerId = await getSellerId(user);
+    const event = await EventModel.findById(booking.eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
 
+    // 🔐 Optional: seller/admin validation
+    if (user.role === "seller" || user.role === "admin") {
+      const sellerId = await getSellerId(user);
       if (booking.buyerId.toString() !== sellerId.toString()) {
         return res
           .status(403)
           .json({ message: "Unauthorized to cancel this booking." });
       }
-
-      const event = await EventModel.findById(booking.eventId);
-      if (!event) {
-        return res.status(404).json({ message: "Event not found." });
-      }
-
-      booking.seats.forEach((seat) => {
-        event.seats = event.seats.filter(
-          (s) =>
-            !(
-              s.section === seat.section &&
-              s.row === seat.row &&
-              s.seatNumber === seat.seatNumber
-            )
-        );
-        event.soldTickets = event.soldTickets.filter(
-          (s) =>
-            !(
-              s.section === seat.section &&
-              s.row === seat.row &&
-              s.seatNumber === seat.seatNumber
-            )
-        );
-      });
-
-      event.ticketSold -= booking.seats.length;
-      event.ticketsAvailable += booking.seats.length;
-
-      booking.status = "cancelled";
-      booking.isPaid = false;
-
-      await Promise.all([booking.save(), event.save()]);
-
-      return res.status(200).json({
-        success: true,
-        message: "Reserved booking cancelled successfully",
-      });
     }
 
-    // 💳 Buyer Logic for paid booking
-    if (user.role === "buyer" && booking.isPaid) {
-      if (booking.status === "cancelled") {
-        return res.status(400).json({ message: "Booking already cancelled" });
-      }
+    // ❌ Already cancelled
+    if (booking.status === "cancelled") {
+      return res.status(400).json({ message: "Booking already cancelled." });
+    }
 
+    // 🔁 Refund logic (if Stripe payment present)
+    if (booking.paymentIntentId) {
       const refund = await stripe.refunds.create({
         payment_intent: booking.paymentIntentId,
       });
@@ -221,63 +189,58 @@ const cancelBooking = async (req, res) => {
       if (refund.status !== "succeeded") {
         return res.status(400).json({ message: "Refund failed. Try again." });
       }
-
-      const event = await EventModel.findById(booking.eventId);
-      if (!event) {
-        return res.status(404).json({ message: "Event not found" });
-      }
-
-      booking.seats.forEach((seat) => {
-        event.seats = event.seats.filter(
-          (s) =>
-            !(
-              s.section === seat.section &&
-              s.row === seat.row &&
-              s.seatNumber === seat.seatNumber
-            )
-        );
-      });
-
-      event.soldTickets = event.soldTickets.filter(
-        (s) =>
-          !booking.seats.some(
-            (b) =>
-              b.section === s.section &&
-              b.row === s.row &&
-              b.seatNumber === s.seatNumber
-          )
-      );
-
-      event.ticketSold -= booking.seats.length;
-      event.ticketsAvailable += booking.seats.length;
-
-      booking.status = "cancelled";
-      booking.isPaid = false;
-      booking.isTicketAvailable = false;
-      booking.isUserVisible = false;
-
-      await OrderModel.findOneAndUpdate(
-        { bookingId: booking._id },
-        { isUserVisible: false }
-      );
-
-      await Promise.all([event.save(), booking.save()]);
-
-      return res.status(200).json({
-        success: true,
-        message: "Paid booking cancelled & refund successful (Buyer)",
-        refundId: refund.id,
-      });
     }
 
-    return res.status(400).json({
-      message: "Invalid booking cancel attempt or you’re not authorized.",
+    // 🎯 Update event
+    booking.seats.forEach((seat) => {
+      event.seats = event.seats.filter(
+        (s) =>
+          !(
+            s.section === seat.section &&
+            s.row === seat.row &&
+            s.seatNumber === seat.seatNumber
+          )
+      );
+    });
+
+    event.soldTickets = event.soldTickets.filter(
+      (s) =>
+        !booking.seats.some(
+          (b) =>
+            b.section === s.section &&
+            b.row === s.row &&
+            b.seatNumber === s.seatNumber
+        )
+    );
+
+    event.ticketSold -= booking.seats.length;
+    event.ticketsAvailable += booking.seats.length;
+
+    // 🎯 Update booking
+    booking.status = "cancelled";
+    booking.isTicketAvailable = false;
+    booking.isUserVisible = false;
+
+    // 🎯 Update order
+    await OrderModel.findOneAndUpdate(
+      { bookingId: booking._id },
+      { isUserVisible: false }
+    );
+
+    await Promise.all([booking.save(), event.save()]);
+
+    return res.status(200).json({
+      success: true,
+      message: booking.paymentIntentId
+        ? "Paid booking cancelled & refunded successfully."
+        : "Coupon-based booking cancelled successfully.",
     });
   } catch (err) {
     console.error("Cancel Booking Error:", err);
-    return res
-      .status(500)
-      .json({ message: "Server error", error: err.message });
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message,
+    });
   }
 };
 

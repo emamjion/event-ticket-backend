@@ -97,82 +97,51 @@ const createPayment = async (req, res) => {
 };
 
 const confirmPayment = async (req, res) => {
-  const { orderId } = req.body;
-
-  if (!orderId) {
-    return res.status(400).json({ message: "orderId is required." });
-  }
-
   try {
-    const order = await OrderModel.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ message: "Order not found." });
+    const { paymentIntentId } = req.body;
+
+    // 1. Find the booking with matching paymentIntentId
+    const booking = await BookingModel.findOne({ paymentIntentId });
+
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found." });
     }
 
-    if (order.paymentStatus === "success") {
+    if (booking.isPaid) {
       return res
         .status(400)
-        .json({ message: "Payment already confirmed for this order." });
+        .json({ success: false, message: "Payment already confirmed." });
     }
 
-    // Step 1: Retrieve payment intent status from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(
-      order.paymentIntentId
-    );
+    // 2. Mark booking as paid and update status
+    booking.isPaid = true;
+    booking.status = "success";
+    await booking.save();
 
-    if (paymentIntent.status !== "succeeded") {
-      order.paymentStatus = "failed";
-      await order.save();
-      return res.status(400).json({
-        success: false,
-        message: "Payment not successful.",
-        status: paymentIntent.status,
-      });
-    }
+    // 3. Create an Order
+    const orderData = {
+      bookingId: booking._id,
+      buyerId: booking.buyerId,
+      eventId: booking.eventId,
+      seats: booking.seats,
+      totalAmount: booking.totalAmount,
+      paymentStatus: "success",
+      paymentIntentId: booking.paymentIntentId,
+      sellerId: req.user?._id,
+      quantity: booking.seats.length,
+    };
 
-    // Step 2: Update Order
-    order.paymentStatus = "success";
-    await order.save();
+    await OrderModel.create(orderData);
 
-    // Step 3: Update Booking
-    await BookingModel.findByIdAndUpdate(order.bookingId, {
-      status: "success",
-      isPaid: true,
-      paymentIntentId: order.paymentIntentId,
-    });
-
-    // Step 4: Update Event
-    const event = await EventModel.findById(order.eventId);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found." });
-    }
-
-    const remainingSeats = event.seats.filter((seat) => {
-      return !order.seats.some(
-        (bookedSeat) =>
-          bookedSeat.section === seat.section &&
-          bookedSeat.row === seat.row &&
-          bookedSeat.seatNumber === seat.seatNumber
-      );
-    });
-
-    const ticketsSoldCount = order.seats.length;
-
-    event.seats = remainingSeats;
-    event.ticketSold += ticketsSoldCount;
-
-    await event.save();
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Payment confirmed, seats booked successfully.",
+      message: "Payment confirmed and order created.",
     });
   } catch (error) {
-    console.error("Confirm Payment error:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message || error,
-    });
+    console.error("Confirm Payment Error:", error);
+    res.status(500).json({ success: false, message: "Something went wrong." });
   }
 };
 

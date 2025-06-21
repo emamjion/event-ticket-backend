@@ -16,45 +16,19 @@ const getSellerId = async (user) => {
   }
 };
 
-// get orders - seller/admin and buyer combine
 const getMyOrders = async (req, res) => {
   try {
     const user = req.user;
-    const objectUserId = new mongoose.Types.ObjectId(user.id);
 
-    let orders = [];
-
-    // If user is buyer (normal user)
-    if (user.role === "buyer") {
-      orders = await OrderModel.find({
-        buyerId: objectUserId,
-        isUserVisible: true,
-        $or: [
-          { paymentStatus: "success" },
-          { paymentStatus: "pending", totalAmount: 0 },
-        ],
-      }).sort({ createdAt: -1 });
-    }
-
-    // If user is seller/admin → fetch reserved bookings
-    if (user.role === "seller" || user.role === "admin") {
-      const sellerId = await getSellerId(user);
-      const reservations = await BookingModel.find({
-        buyerId: new mongoose.Types.ObjectId(sellerId),
-        isPaid: false,
-      }).sort({ createdAt: -1 });
-
-      const formattedReservations = reservations.map((item) => ({
-        ...item.toObject(),
-        isReservation: true, // frontend can use this
-      }));
-
-      orders = [...orders, ...formattedReservations];
-    }
+    const orders = await OrderModel.find({
+      buyerId: user.id,
+      paymentStatus: "success",
+      isUserVisible: true,
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      message: "Orders and reservations fetched successfully",
+      message: "Orders fetched successfully",
       totalOrders: orders.length,
       data: orders,
     });
@@ -62,7 +36,7 @@ const getMyOrders = async (req, res) => {
     console.error("getMyOrders error:", error);
     res.status(500).json({
       success: false,
-      error: "Failed to fetch orders/reservations",
+      error: "Failed to fetch orders",
       message: error.message,
     });
   }

@@ -5,7 +5,9 @@ import UserModel from "../models/userModel.js";
 // Sales report controller function
 const generateSalesReport = async (req, res) => {
   try {
-    const soldOrders = await OrderModel.find({ paymentStatus: "success" });
+    const soldOrders = await OrderModel.find({
+      paymentStatus: "success",
+    }).populate("eventId", "title");
 
     const totalRevenue = soldOrders.reduce(
       (total, order) => total + order.totalAmount,
@@ -34,13 +36,24 @@ const generateUserReport = async (req, res) => {
     const totalUsers = await UserModel.countDocuments();
     const totalSellers = await SellerModel.countDocuments();
 
+    const soldOrders = await OrderModel.find({
+      paymentStatus: "success",
+    }).select("buyerId");
+
+    const buyerIdSet = new Set(
+      soldOrders.map((order) => order.buyerId.toString())
+    );
+    const buyerIds = [...buyerIdSet];
+
+    const buyers = await UserModel.find({ _id: { $in: buyerIds } });
+
     res.status(200).json({
       success: true,
       message: "User report generated successfully",
       totalUsers,
-      totalUsersNumber: totalUsers.length,
       totalSellers,
-      totalSellersNumber: totalSellers.length,
+      totalBuyers: buyers.length,
+      buyers,
     });
   } catch (error) {
     res.status(500).json({

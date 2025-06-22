@@ -30,6 +30,10 @@ const bookingSchema = new mongoose.Schema({
     enum: ["success", "cancelled", "pending", "reserved"],
     default: "pending",
   },
+  isUserVisible: {
+    type: Boolean,
+    default: false,
+  },
   isTicketAvailable: {
     type: Boolean,
     default: true,

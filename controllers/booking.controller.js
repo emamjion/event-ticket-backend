@@ -133,9 +133,13 @@ const bookSeats = async (req, res) => {
   }
 
   try {
+    // Event check
     const event = await EventModel.findById(eventId);
-    if (!event) return res.status(404).json({ message: "Event not found." });
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
 
+    // Seat availability check
     const unavailableSeats = seats.filter((seat) =>
       event.seats.some(
         (s) =>
@@ -153,9 +157,10 @@ const bookSeats = async (req, res) => {
       });
     }
 
-    // 🧮 Calculate total amount from seat prices
+    // Total amount calculation from seat prices
     const totalAmount = seats.reduce((sum, seat) => sum + seat.price, 0);
 
+    // Booking create
     const newBooking = new BookingModel({
       eventId,
       buyerId,
@@ -163,10 +168,12 @@ const bookSeats = async (req, res) => {
       totalAmount,
       isPaid: false,
       status: "pending",
+      isUserVisible: false, // important: will show in My Tickets only after payment
     });
 
     await newBooking.save();
 
+    // Event data update
     event.seats.push(...seats);
     event.soldTickets.push(...seats);
     event.ticketSold += seats.length;
@@ -174,18 +181,20 @@ const bookSeats = async (req, res) => {
 
     await event.save();
 
-    // ⏱️ Auto cancel after 10 minutes
+    // Auto cancel setup (after 10 minutes)
     setTimeout(async () => {
       const stillPending = await BookingModel.findById(newBooking._id);
 
       if (stillPending && !stillPending.isPaid) {
-        console.log("⏱️ Auto cancelling unpaid booking: ", newBooking._id);
+        console.log("Auto cancelling unpaid booking:", newBooking._id);
 
+        // Cancel the booking
         stillPending.status = "cancelled";
         stillPending.isTicketAvailable = false;
         stillPending.isUserVisible = false;
         await stillPending.save();
 
+        // Return the seats to the event
         const originalEvent = await EventModel.findById(eventId);
         if (originalEvent) {
           stillPending.seats.forEach((seat) => {
@@ -197,7 +206,6 @@ const bookSeats = async (req, res) => {
                   s.seatNumber === seat.seatNumber
                 )
             );
-
             originalEvent.soldTickets = originalEvent.soldTickets.filter(
               (s) =>
                 !(
@@ -214,12 +222,13 @@ const bookSeats = async (req, res) => {
           await originalEvent.save();
         }
 
+        // Hide from Orders
         await OrderModel.findOneAndUpdate(
           { bookingId: stillPending._id },
           { isUserVisible: false }
         );
       }
-    }, 10 * 60 * 1000); // 10 minutes
+    }, 10 * 60 * 1000); // 10 minutes in ms
 
     res.status(200).json({
       success: true,

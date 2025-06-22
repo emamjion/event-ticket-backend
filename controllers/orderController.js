@@ -18,25 +18,36 @@ const getSellerId = async (user) => {
 
 const getMyOrders = async (req, res) => {
   try {
-    const buyerId = req.user._id;
+    const buyerId = req.user.id;
 
-    // সব অর্ডার এনে নিচ্ছি যেগুলো visible এবং buyerId মিলে
     const allOrders = await OrderModel.find({
       buyerId,
+      paymentStatus: "success",
       isUserVisible: true,
     }).populate("eventId", "title date");
+    // console.log("all orders: ", allOrders);
 
-    // অর্ডার গুলো loop করে filteredSeats বের করব
+    if (!allOrders.length) {
+      return res.status(200).json({
+        success: true,
+        message: "No orders found",
+        totalOrders: 0,
+        data: [],
+      });
+    }
+
     const updatedOrders = allOrders.map((order) => {
-      // শুধু active (cancel হয়নি) সিট গুলো
       const activeSeats = order.seats.filter((seat) => !seat.isCancelled);
 
-      // যদি সব সিট ক্যানসেল হয়ে যায়, তাহলে ইউজারকে দেখানোর দরকার নেই
+      // Debug
+      // console.log("Order ID:", order._id);
+      // console.log("Total seats:", order.seats.length);
+      // console.log("Active seats:", activeSeats.length);
+
       if (activeSeats.length === 0) {
         return null;
       }
 
-      // activeSeats সহ নতুন করে অর্ডার বানালাম
       return {
         _id: order._id,
         eventTitle: order.eventId?.title || "Untitled Event",
@@ -49,7 +60,6 @@ const getMyOrders = async (req, res) => {
       };
     });
 
-    // null বাদ দিয়ে filtered result পাঠাব
     const filteredOrders = updatedOrders.filter(Boolean);
 
     res.status(200).json({
@@ -59,6 +69,7 @@ const getMyOrders = async (req, res) => {
       data: filteredOrders,
     });
   } catch (error) {
+    console.error("Error in getMyOrders:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch orders",
@@ -66,7 +77,6 @@ const getMyOrders = async (req, res) => {
     });
   }
 };
-
 
 const getSingleOrder = async (req, res) => {
   try {
@@ -166,4 +176,3 @@ const getMyReservations = async (req, res) => {
 };
 
 export { getMyOrders, getMyReservations, getSingleOrder };
-

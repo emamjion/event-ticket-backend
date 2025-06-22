@@ -53,6 +53,7 @@ const getMyOrders = async (req, res) => {
       return {
         _id: order._id,
         eventTitle: order.eventId?.title || "Untitled Event",
+        eventId: order.eventId,
         eventDate: order.eventId?.date || "N/A",
         bookingId: order.bookingId,
         seats: activeSeats,

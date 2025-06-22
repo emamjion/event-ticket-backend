@@ -18,64 +18,26 @@ const getSellerId = async (user) => {
 
 const getMyOrders = async (req, res) => {
   try {
-    const buyerId = req.user.id;
+    const user = req.user;
 
-    const allOrders = await OrderModel.find({
-      buyerId,
+    const orders = await OrderModel.find({
+      buyerId: user.id,
       paymentStatus: "success",
       isUserVisible: true,
-    })
-      .populate("eventId")
-      .sort({ createdAt: -1 });
-    // console.log("all orders: ", allOrders);
-
-    if (!allOrders.length) {
-      return res.status(200).json({
-        success: true,
-        message: "No orders found",
-        totalOrders: 0,
-        data: [],
-      });
-    }
-
-    const updatedOrders = allOrders.map((order) => {
-      const activeSeats = order.seats.filter((seat) => !seat.isCancelled);
-
-      // Debug
-      // console.log("Order ID:", order._id);
-      // console.log("Total seats:", order.seats.length);
-      // console.log("Active seats:", activeSeats.length);
-
-      if (activeSeats.length === 0) {
-        return null;
-      }
-
-      return {
-        _id: order._id,
-        eventId: order.eventId,
-        eventDate: order.eventId?.date || "N/A",
-        bookingId: order.bookingId,
-        seats: activeSeats,
-        totalAmount: order.totalAmount,
-        paymentStatus: order.paymentStatus,
-        createdAt: order.createdAt,
-      };
-    });
-
-    const filteredOrders = updatedOrders.filter(Boolean);
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       message: "Orders fetched successfully",
-      totalOrders: filteredOrders.length,
-      data: updatedOrders,
+      totalOrders: orders.length,
+      data: orders,
     });
   } catch (error) {
-    console.error("Error in getMyOrders:", error);
+    console.error("getMyOrders error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to fetch orders",
-      error: error.message,
+      error: "Failed to fetch orders",
+      message: error.message,
     });
   }
 };

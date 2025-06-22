@@ -147,7 +147,7 @@ const confirmPayment = async (req, res) => {
 
 // cancel booking for buyer and seller/admin
 const cancelBooking = async (req, res) => {
-  const { bookingId } = req.body;
+  const { bookingId, seatToCancel } = req.body;
 
   if (!bookingId) {
     return res.status(400).json({ message: "Booking ID is required." });
@@ -165,7 +165,7 @@ const cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    // 🔐 Optional: seller/admin validation
+    // 🔐 Seller/Admin authorization check (optional)
     if (user.role === "seller" || user.role === "admin") {
       const sellerId = await getSellerId(user);
       if (booking.buyerId.toString() !== sellerId.toString()) {
@@ -180,7 +180,80 @@ const cancelBooking = async (req, res) => {
       return res.status(400).json({ message: "Booking already cancelled." });
     }
 
-    // 🔁 Refund logic (if Stripe payment present)
+    // 🔁 If single seat cancel requested
+    if (seatToCancel) {
+      const { section, row, seatNumber } = seatToCancel;
+
+      // Check if seat exists in booking
+      const seatExists = booking.seats.some(
+        (s) =>
+          s.section === section && s.row === row && s.seatNumber === seatNumber
+      );
+
+      if (!seatExists) {
+        return res
+          .status(400)
+          .json({ message: "Seat not found in this booking." });
+      }
+
+      // Remove seat from booking
+      booking.seats = booking.seats.filter(
+        (s) =>
+          !(
+            s.section === section &&
+            s.row === row &&
+            s.seatNumber === seatNumber
+          )
+      );
+
+      // Remove seat from event.seats
+      event.seats = event.seats.filter(
+        (s) =>
+          !(
+            s.section === section &&
+            s.row === row &&
+            s.seatNumber === seatNumber
+          )
+      );
+
+      // Remove seat from event.soldTickets
+      event.soldTickets = event.soldTickets.filter(
+        (s) =>
+          !(
+            s.section === section &&
+            s.row === row &&
+            s.seatNumber === seatNumber
+          )
+      );
+
+      event.ticketSold -= 1;
+      event.ticketsAvailable += 1;
+
+      // If no seats left in booking, treat as full cancel
+      if (booking.seats.length === 0) {
+        booking.status = "cancelled";
+        booking.isTicketAvailable = false;
+        booking.isUserVisible = false;
+
+        await OrderModel.findOneAndUpdate(
+          { bookingId: booking._id },
+          { isUserVisible: false }
+        );
+      }
+
+      await Promise.all([booking.save(), event.save()]);
+
+      return res.status(200).json({
+        success: true,
+        message:
+          booking.seats.length === 0
+            ? "All seats cancelled successfully."
+            : "Selected seat cancelled successfully.",
+      });
+    }
+
+    // ✅ Full Booking Cancel (as before)
+
     if (booking.paymentIntentId) {
       const refund = await stripe.refunds.create({
         payment_intent: booking.paymentIntentId,
@@ -191,7 +264,6 @@ const cancelBooking = async (req, res) => {
       }
     }
 
-    // 🎯 Update event
     booking.seats.forEach((seat) => {
       event.seats = event.seats.filter(
         (s) =>
@@ -216,12 +288,10 @@ const cancelBooking = async (req, res) => {
     event.ticketSold -= booking.seats.length;
     event.ticketsAvailable += booking.seats.length;
 
-    // 🎯 Update booking
     booking.status = "cancelled";
     booking.isTicketAvailable = false;
     booking.isUserVisible = false;
 
-    // 🎯 Update order
     await OrderModel.findOneAndUpdate(
       { bookingId: booking._id },
       { isUserVisible: false }
@@ -232,7 +302,7 @@ const cancelBooking = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: booking.paymentIntentId
-        ? "Paid booking cancelled & refunded successfully."
+        ? "Booking cancelled & refunded successfully."
         : "Coupon-based booking cancelled successfully.",
     });
   } catch (err) {

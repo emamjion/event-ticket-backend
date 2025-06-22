@@ -18,29 +18,55 @@ const getSellerId = async (user) => {
 
 const getMyOrders = async (req, res) => {
   try {
-    const user = req.user;
+    const buyerId = req.user._id;
 
-    const orders = await OrderModel.find({
-      buyerId: user.id,
-      paymentStatus: "success",
+    // সব অর্ডার এনে নিচ্ছি যেগুলো visible এবং buyerId মিলে
+    const allOrders = await OrderModel.find({
+      buyerId,
       isUserVisible: true,
-    }).sort({ createdAt: -1 });
+    }).populate("eventId", "title date");
+
+    // অর্ডার গুলো loop করে filteredSeats বের করব
+    const updatedOrders = allOrders.map((order) => {
+      // শুধু active (cancel হয়নি) সিট গুলো
+      const activeSeats = order.seats.filter((seat) => !seat.isCancelled);
+
+      // যদি সব সিট ক্যানসেল হয়ে যায়, তাহলে ইউজারকে দেখানোর দরকার নেই
+      if (activeSeats.length === 0) {
+        return null;
+      }
+
+      // activeSeats সহ নতুন করে অর্ডার বানালাম
+      return {
+        _id: order._id,
+        eventTitle: order.eventId?.title || "Untitled Event",
+        eventDate: order.eventId?.date || "N/A",
+        bookingId: order.bookingId,
+        seats: activeSeats,
+        totalAmount: order.totalAmount,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+      };
+    });
+
+    // null বাদ দিয়ে filtered result পাঠাব
+    const filteredOrders = updatedOrders.filter(Boolean);
 
     res.status(200).json({
       success: true,
       message: "Orders fetched successfully",
-      totalOrders: orders.length,
-      data: orders,
+      totalOrders: filteredOrders.length,
+      data: filteredOrders,
     });
   } catch (error) {
-    console.error("getMyOrders error:", error);
     res.status(500).json({
       success: false,
-      error: "Failed to fetch orders",
-      message: error.message,
+      message: "Failed to fetch orders",
+      error: error.message,
     });
   }
 };
+
 
 const getSingleOrder = async (req, res) => {
   try {
@@ -140,3 +166,4 @@ const getMyReservations = async (req, res) => {
 };
 
 export { getMyOrders, getMyReservations, getSingleOrder };
+

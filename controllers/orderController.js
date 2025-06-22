@@ -24,7 +24,9 @@ const getMyOrders = async (req, res) => {
       buyerId,
       paymentStatus: "success",
       isUserVisible: true,
-    }).populate("eventId", "title date");
+    })
+      .populate("eventId", "title date")
+      .sort({ createdAt: -1 });
     // console.log("all orders: ", allOrders);
 
     if (!allOrders.length) {

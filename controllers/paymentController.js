@@ -165,7 +165,7 @@ const cancelBooking = async (req, res) => {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    // 🔐 Seller/Admin authorization check (optional)
+    // Seller/Admin authorization check (optional)
     if (user.role === "seller" || user.role === "admin") {
       const sellerId = await getSellerId(user);
       if (booking.buyerId.toString() !== sellerId.toString()) {
@@ -175,48 +175,36 @@ const cancelBooking = async (req, res) => {
       }
     }
 
-    // ❌ Already cancelled
+    // If booking already fully cancelled, reject
     if (booking.status === "cancelled") {
       return res.status(400).json({ message: "Booking already cancelled." });
     }
 
-    // 🔁 If single seat cancel requested
+    // Partial seat cancellation
     if (seatToCancel) {
       const { section, row, seatNumber } = seatToCancel;
 
-      // Check if seat exists in booking
-      const seatExists = booking.seats.some(
+      // Check if seat exists and is currently booked
+      const seatIndex = booking.seats.findIndex(
         (s) =>
-          s.section === section && s.row === row && s.seatNumber === seatNumber
+          s.section === section &&
+          s.row === row &&
+          s.seatNumber === seatNumber &&
+          s.isBooked === true
       );
 
-      if (!seatExists) {
+      if (seatIndex === -1) {
         return res
           .status(400)
-          .json({ message: "Seat not found in this booking." });
+          .json({ message: "Seat not found or already cancelled." });
       }
 
-      // Remove seat from booking
-      booking.seats = booking.seats.filter(
-        (s) =>
-          !(
-            s.section === section &&
-            s.row === row &&
-            s.seatNumber === seatNumber
-          )
-      );
+      // Mark seat as not booked in booking.seats
+      booking.seats[seatIndex].isBooked = false;
 
-      // Remove seat from event.seats
-      event.seats = event.seats.filter(
-        (s) =>
-          !(
-            s.section === section &&
-            s.row === row &&
-            s.seatNumber === seatNumber
-          )
-      );
+      // Also update event.soldTickets and event.seats availability
 
-      // Remove seat from event.soldTickets
+      // Remove the seat from event.soldTickets
       event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(
@@ -226,11 +214,26 @@ const cancelBooking = async (req, res) => {
           )
       );
 
+      // Add seat back to event.seats availability (if needed)
+      // Assuming event.seats keeps track of available seats
+      const seatAlreadyAvailable = event.seats.some(
+        (s) =>
+          s.section === section && s.row === row && s.seatNumber === seatNumber
+      );
+
+      if (!seatAlreadyAvailable) {
+        event.seats.push({ section, row, seatNumber });
+      }
+
       event.ticketSold -= 1;
       event.ticketsAvailable += 1;
 
-      // If no seats left in booking, treat as full cancel
-      if (booking.seats.length === 0) {
+      // After partial cancel, check if all seats cancelled
+      const allSeatsCancelled = booking.seats.every(
+        (seat) => seat.isBooked === false
+      );
+
+      if (allSeatsCancelled) {
         booking.status = "cancelled";
         booking.isTicketAvailable = false;
         booking.isUserVisible = false;
@@ -245,15 +248,15 @@ const cancelBooking = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message:
-          booking.seats.length === 0
-            ? "All seats cancelled successfully."
-            : "Selected seat cancelled successfully.",
+        message: allSeatsCancelled
+          ? "All seats cancelled successfully."
+          : "Selected seat cancelled successfully.",
       });
     }
 
-    // ✅ Full Booking Cancel (as before)
+    // Full booking cancellation
 
+    // Refund if paymentIntent exists
     if (booking.paymentIntentId) {
       const refund = await stripe.refunds.create({
         payment_intent: booking.paymentIntentId,
@@ -264,8 +267,12 @@ const cancelBooking = async (req, res) => {
       }
     }
 
+    // Mark all seats as not booked
     booking.seats.forEach((seat) => {
-      event.seats = event.seats.filter(
+      seat.isBooked = false;
+
+      // Remove seat from event.soldTickets
+      event.soldTickets = event.soldTickets.filter(
         (s) =>
           !(
             s.section === seat.section &&
@@ -273,17 +280,23 @@ const cancelBooking = async (req, res) => {
             s.seatNumber === seat.seatNumber
           )
       );
-    });
 
-    event.soldTickets = event.soldTickets.filter(
-      (s) =>
-        !booking.seats.some(
-          (b) =>
-            b.section === s.section &&
-            b.row === s.row &&
-            b.seatNumber === s.seatNumber
-        )
-    );
+      // Add seat back to event.seats availability
+      const seatAlreadyAvailable = event.seats.some(
+        (s) =>
+          s.section === seat.section &&
+          s.row === seat.row &&
+          s.seatNumber === seat.seatNumber
+      );
+
+      if (!seatAlreadyAvailable) {
+        event.seats.push({
+          section: seat.section,
+          row: seat.row,
+          seatNumber: seat.seatNumber,
+        });
+      }
+    });
 
     event.ticketSold -= booking.seats.length;
     event.ticketsAvailable += booking.seats.length;

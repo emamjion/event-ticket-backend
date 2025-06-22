@@ -30,6 +30,30 @@ const addSeats = async (req, res) => {
 };
 
 // Get seats by eventId
+// const getSeatsByEvent = async (req, res) => {
+//   const { eventId } = req.params;
+
+//   if (!eventId) {
+//     return res
+//       .status(400)
+//       .json({ success: false, message: "Event ID required" });
+//   }
+
+//   try {
+//     const seats = await EventModel.find({ eventId });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Seats fetched successfully",
+//       totalSeats: seats.length,
+//       seats,
+//     });
+//   } catch (error) {
+//     console.error("Get seats error:", error);
+//     res.status(500).json({ success: false, message: "Server error", error });
+//   }
+// };
+
 const getSeatsByEvent = async (req, res) => {
   const { eventId } = req.params;
 
@@ -40,16 +64,21 @@ const getSeatsByEvent = async (req, res) => {
   }
 
   try {
-    const seats = await SeatModel.find({ eventId });
+    const event = await EventModel.findById(eventId);
+    if (!event) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Event not found" });
+    }
 
     res.status(200).json({
       success: true,
-      message: "Seats fetched successfully",
-      totalSeats: seats.length,
-      seats,
+      message: "Booked seats fetched successfully",
+      totalSeats: event.seats.length,
+      seats: event.seats,
     });
   } catch (error) {
-    console.error("Get seats error:", error);
+    console.error("Get booked seats error:", error);
     res.status(500).json({ success: false, message: "Server error", error });
   }
 };

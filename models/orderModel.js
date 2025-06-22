@@ -34,7 +34,8 @@ const orderSchema = new mongoose.Schema(
       enum: ["success", "failed"],
       default: "success",
     },
-    paymentIntentId: String,
+    // paymentIntentId: String,
+    paymentIntentId: { type: String, required: true },
     orderTime: {
       type: Date,
       default: Date.now,

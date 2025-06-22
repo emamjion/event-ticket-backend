@@ -5,7 +5,7 @@ const seatSchema = new mongoose.Schema({
   row: String,
   seatNumber: Number,
   price: Number,
-  isBooked: { type: Boolean, default: false },
+  isBooked: { type: Boolean },
 });
 
 const bookingSchema = new mongoose.Schema({

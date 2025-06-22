@@ -146,183 +146,319 @@ const confirmPayment = async (req, res) => {
 };
 
 // cancel booking for buyer and seller/admin
+// booking model theke data gulo newa hocche
+// const cancelBooking = async (req, res) => {
+//   const { bookingId, seatToCancel } = req.body;
+
+//   if (!bookingId || !seatToCancel?._id) {
+//     return res.status(400).json({ message: "Booking ID and seat are required." });
+//   }
+
+//   try {
+//     const booking = await BookingModel.findById(bookingId);
+//     if (!booking) return res.status(404).json({ message: "Booking not found." });
+
+//     const event = await EventModel.findById(booking.eventId);
+//     if (!event) return res.status(404).json({ message: "Event not found." });
+
+//     // Check if seat exists in booking
+//     const seatExists = booking.seats.some(seat => seat._id.toString() === seatToCancel._id);
+//     if (!seatExists) return res.status(400).json({ message: "Seat not found in booking." });
+
+//     // Remove seat from booking and event
+//     booking.seats = booking.seats.filter(seat => seat._id.toString() !== seatToCancel._id);
+//     event.seats = event.seats.filter(seat =>
+//       !(seat.section === seatToCancel.section &&
+//         seat.row === seatToCancel.row &&
+//         seat.seatNumber === seatToCancel.seatNumber)
+//     );
+
+//     event.soldTickets = event.soldTickets.filter(seat =>
+//       !(seat.section === seatToCancel.section &&
+//         seat.row === seatToCancel.row &&
+//         seat.seatNumber === seatToCancel.seatNumber)
+//     );
+
+//     event.ticketSold -= 1;
+//     event.ticketsAvailable += 1;
+
+//     // Partial refund (if payment made)
+//     if (booking.paymentIntentId) {
+//       const perSeatAmount = booking.totalAmount / (booking.seats.length + 1); // +1 for the removed one
+//       const refund = await stripe.refunds.create({
+//         payment_intent: booking.paymentIntentId,
+//         amount: Math.round(perSeatAmount * 100), // stripe uses cents
+//       });
+//       if (refund.status !== "succeeded") {
+//         return res.status(400).json({ message: "Refund failed." });
+//       }
+
+//       booking.totalAmount -= perSeatAmount;
+//     }
+
+//     // If no seats left, cancel entire booking
+//     if (booking.seats.length === 0) {
+//       booking.status = "cancelled";
+//       booking.isTicketAvailable = false;
+//       booking.isUserVisible = false;
+//       await OrderModel.findOneAndUpdate({ bookingId }, { isUserVisible: false });
+//     }
+
+//     await Promise.all([booking.save(), event.save()]);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Seat cancelled successfully" + (booking.status === "cancelled" ? " & booking closed." : "."),
+//     });
+
+//   } catch (err) {
+//     console.error("Cancel Seat Error:", err);
+//     return res.status(500).json({ message: "Internal server error.", error: err.message });
+//   }
+// };
+
+// order model theke data newa hocche -1
+// const cancelBooking = async (req, res) => {
+//   const { bookingId, seatToCancel } = req.body;
+
+//   if (!bookingId || !seatToCancel?._id) {
+//     return res
+//       .status(400)
+//       .json({ message: "Booking ID and seat are required." });
+//   }
+
+//   try {
+//     const booking = await BookingModel.findById(bookingId);
+//     if (!booking)
+//       return res.status(404).json({ message: "Booking not found." });
+
+//     const event = await EventModel.findById(booking.eventId);
+//     if (!event) return res.status(404).json({ message: "Event not found." });
+
+//     // Check if seat exists in booking
+//     const seatExists = booking.seats.some(
+//       (seat) => seat._id.toString() === seatToCancel._id
+//     );
+//     if (!seatExists)
+//       return res.status(400).json({ message: "Seat not found in booking." });
+
+//     // Remove seat from booking
+//     booking.seats = booking.seats.filter(
+//       (seat) => seat._id.toString() !== seatToCancel._id
+//     );
+
+//     // Remove seat from event
+//     event.seats = event.seats.filter(
+//       (seat) =>
+//         !(
+//           seat.section === seatToCancel.section &&
+//           seat.row === seatToCancel.row &&
+//           seat.seatNumber === seatToCancel.seatNumber
+//         )
+//     );
+//     event.soldTickets = event.soldTickets.filter(
+//       (seat) =>
+//         !(
+//           seat.section === seatToCancel.section &&
+//           seat.row === seatToCancel.row &&
+//           seat.seatNumber === seatToCancel.seatNumber
+//         )
+//     );
+//     event.ticketSold -= 1;
+//     event.ticketsAvailable += 1;
+
+//     // Partial refund if paymentIntentId exists
+//     if (booking.paymentIntentId) {
+//       const perSeatAmount = booking.totalAmount / (booking.seats.length + 1); // +1 for removed seat
+//       const refund = await stripe.refunds.create({
+//         payment_intent: booking.paymentIntentId,
+//         amount: Math.round(perSeatAmount * 100),
+//       });
+
+//       if (refund.status !== "succeeded") {
+//         return res.status(400).json({ message: "Refund failed. Try again." });
+//       }
+
+//       booking.totalAmount -= perSeatAmount;
+//     }
+
+//     // Update OrderModel
+//     const order = await OrderModel.findOne({ bookingId });
+
+//     if (order) {
+//       const seatIndex = order.seats.findIndex(
+//         (seat) =>
+//           seat.section === seatToCancel.section &&
+//           seat.row === seatToCancel.row &&
+//           seat.seatNumber === seatToCancel.seatNumber
+//       );
+
+//       const seatPrice = order.seats[seatIndex]?.price || 0;
+
+//       // Remove seat from order
+//       order.seats.splice(seatIndex, 1);
+//       order.totalAmount -= seatPrice;
+//       order.quantity -= 1;
+
+//       // If no seats left, hide the order
+//       if (order.seats.length === 0) {
+//         order.isUserVisible = false;
+//       }
+
+//       await order.save();
+//     }
+
+//     // If no seats left in booking, mark as cancelled
+//     if (booking.seats.length === 0) {
+//       booking.status = "cancelled";
+//       booking.isTicketAvailable = false;
+//       booking.isUserVisible = false;
+//     }
+
+//     await Promise.all([booking.save(), event.save()]);
+
+//     return res.status(200).json({
+//       success: true,
+//       message:
+//         "Seat cancelled successfully" +
+//         (booking.status === "cancelled" ? " & booking closed." : "."),
+//     });
+//   } catch (err) {
+//     console.error("Cancel Seat Error:", err);
+//     return res.status(500).json({
+//       message: "Internal server error.",
+//       error: err.message,
+//     });
+//   }
+// };
+
+// based on ordermodel -2
+// const cancelBooking = async (req, res) => {
+//   try {
+//     const { orderId, seatToCancel } = req.body;
+
+//     if (!orderId || !seatToCancel) {
+//       return res.status(400).json({
+//         message: "Order ID and seat to cancel are required.",
+//       });
+//     }
+
+//     const { section, row, seatNumber } = seatToCancel;
+
+//     // Step 1: Find the order
+//     const order = await OrderModel.findById(orderId);
+//     if (!order) {
+//       return res.status(404).json({
+//         message: "Order not found.",
+//       });
+//     }
+
+//     // Step 2: Find index of the seat to remove
+//     const seatIndex = order.seats.findIndex(
+//       (seat) =>
+//         seat.section === section &&
+//         seat.row === row &&
+//         seat.seatNumber === seatNumber
+//     );
+
+//     if (seatIndex === -1) {
+//       return res.status(404).json({
+//         message: "Seat not found or already removed.",
+//       });
+//     }
+
+//     // Step 3: Remove the seat from the array
+//     order.seats.splice(seatIndex, 1);
+
+//     // Step 4: Update quantity and totalAmount (optional, if required)
+//     order.quantity = order.seats.length;
+//     // order.totalAmount = order.quantity * singleSeatPrice; // Optional
+
+//     // Step 5: Save the updated order
+//     await order.save();
+
+//     return res.status(200).json({
+//       message: "Seat cancelled successfully.",
+//       updatedOrder: order,
+//     });
+//   } catch (error) {
+//     console.error("Cancel Seat Error:", error);
+//     return res.status(500).json({
+//       message: "Internal server error.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// based on order model and minus price after cancel single seat
 const cancelBooking = async (req, res) => {
-  const { bookingId, seatToCancel } = req.body;
-
-  if (!bookingId) {
-    return res.status(400).json({ message: "Booking ID is required." });
-  }
-
   try {
-    const user = req.user;
-    const booking = await BookingModel.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found." });
-    }
+    const { orderId, seatToCancel } = req.body;
 
-    const event = await EventModel.findById(booking.eventId);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found." });
-    }
-
-    // Seller/Admin authorization check (optional)
-    if (user.role === "seller" || user.role === "admin") {
-      const sellerId = await getSellerId(user);
-      if (booking.buyerId.toString() !== sellerId.toString()) {
-        return res
-          .status(403)
-          .json({ message: "Unauthorized to cancel this booking." });
-      }
-    }
-
-    // If booking already fully cancelled, reject
-    if (booking.status === "cancelled") {
-      return res.status(400).json({ message: "Booking already cancelled." });
-    }
-
-    // Partial seat cancellation
-    if (seatToCancel) {
-      const { section, row, seatNumber } = seatToCancel;
-
-      // Check if seat exists and is currently booked
-      const seatIndex = booking.seats.findIndex(
-        (s) =>
-          s.section === section &&
-          s.row === row &&
-          s.seatNumber === seatNumber &&
-          s.isBooked === true
-      );
-
-      if (seatIndex === -1) {
-        return res
-          .status(400)
-          .json({ message: "Seat not found or already cancelled." });
-      }
-
-      // Mark seat as not booked in booking.seats
-      booking.seats[seatIndex].isBooked = false;
-
-      // Also update event.soldTickets and event.seats availability
-
-      // Remove the seat from event.soldTickets
-      event.soldTickets = event.soldTickets.filter(
-        (s) =>
-          !(
-            s.section === section &&
-            s.row === row &&
-            s.seatNumber === seatNumber
-          )
-      );
-
-      // Add seat back to event.seats availability (if needed)
-      // Assuming event.seats keeps track of available seats
-      const seatAlreadyAvailable = event.seats.some(
-        (s) =>
-          s.section === section && s.row === row && s.seatNumber === seatNumber
-      );
-
-      if (!seatAlreadyAvailable) {
-        event.seats.push({ section, row, seatNumber });
-      }
-
-      event.ticketSold -= 1;
-      event.ticketsAvailable += 1;
-
-      // After partial cancel, check if all seats cancelled
-      const allSeatsCancelled = booking.seats.every(
-        (seat) => seat.isBooked === false
-      );
-
-      if (allSeatsCancelled) {
-        booking.status = "cancelled";
-        booking.isTicketAvailable = false;
-        booking.isUserVisible = false;
-
-        await OrderModel.findOneAndUpdate(
-          { bookingId: booking._id },
-          { isUserVisible: false }
-        );
-      }
-
-      await Promise.all([booking.save(), event.save()]);
-
-      return res.status(200).json({
-        success: true,
-        message: allSeatsCancelled
-          ? "All seats cancelled successfully."
-          : "Selected seat cancelled successfully.",
+    if (!orderId || !seatToCancel) {
+      return res.status(400).json({
+        message: "Order ID and seat to cancel are required.",
       });
     }
 
-    // Full booking cancellation
+    const { section, row, seatNumber, price } = seatToCancel;
 
-    // Refund if paymentIntent exists
-    if (booking.paymentIntentId) {
-      const refund = await stripe.refunds.create({
-        payment_intent: booking.paymentIntentId,
+    if (typeof price !== "number") {
+      return res.status(400).json({
+        message: "Seat price must be provided for cancellation.",
       });
-
-      if (refund.status !== "succeeded") {
-        return res.status(400).json({ message: "Refund failed. Try again." });
-      }
     }
 
-    // Mark all seats as not booked
-    booking.seats.forEach((seat) => {
-      seat.isBooked = false;
+    const order = await OrderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found." });
+    }
 
-      // Remove seat from event.soldTickets
-      event.soldTickets = event.soldTickets.filter(
-        (s) =>
-          !(
-            s.section === seat.section &&
-            s.row === seat.row &&
-            s.seatNumber === seat.seatNumber
-          )
-      );
-
-      // Add seat back to event.seats availability
-      const seatAlreadyAvailable = event.seats.some(
-        (s) =>
-          s.section === seat.section &&
-          s.row === seat.row &&
-          s.seatNumber === seat.seatNumber
-      );
-
-      if (!seatAlreadyAvailable) {
-        event.seats.push({
-          section: seat.section,
-          row: seat.row,
-          seatNumber: seat.seatNumber,
-        });
-      }
-    });
-
-    event.ticketSold -= booking.seats.length;
-    event.ticketsAvailable += booking.seats.length;
-
-    booking.status = "cancelled";
-    booking.isTicketAvailable = false;
-    booking.isUserVisible = false;
-
-    await OrderModel.findOneAndUpdate(
-      { bookingId: booking._id },
-      { isUserVisible: false }
+    // Find seat
+    const seatIndex = order.seats.findIndex(
+      (seat) =>
+        seat.section === section &&
+        seat.row === row &&
+        seat.seatNumber === seatNumber
     );
 
-    await Promise.all([booking.save(), event.save()]);
+    if (seatIndex === -1) {
+      return res
+        .status(404)
+        .json({ message: "Seat not found or already removed." });
+    }
+
+    // Remove the seat
+    order.seats.splice(seatIndex, 1);
+
+    // Refund via Stripe
+    if (!order.paymentIntentId) {
+      return res
+        .status(400)
+        .json({ message: "No payment intent found for refund." });
+    }
+
+    const refund = await stripe.refunds.create({
+      payment_intent: order.paymentIntentId,
+      amount: price * 100, // Stripe takes amount in cents
+    });
+
+    // Update totalAmount and quantity
+    order.totalAmount = Math.max(0, order.totalAmount - price);
+    order.quantity = order.seats.length;
+
+    await order.save();
 
     return res.status(200).json({
-      success: true,
-      message: booking.paymentIntentId
-        ? "Booking cancelled & refunded successfully."
-        : "Coupon-based booking cancelled successfully.",
+      message: "Seat cancelled and refund initiated.",
+      refund,
+      updatedOrder: order,
     });
-  } catch (err) {
-    console.error("Cancel Booking Error:", err);
+  } catch (error) {
+    console.error("Cancel Seat Error:", error);
     return res.status(500).json({
-      message: "Server error",
-      error: err.message,
+      message: "Internal server error.",
+      error: error.message,
     });
   }
 };

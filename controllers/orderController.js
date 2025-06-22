@@ -25,7 +25,7 @@ const getMyOrders = async (req, res) => {
       paymentStatus: "success",
       isUserVisible: true,
     })
-      .populate("eventId", "title date")
+      .populate("eventId")
       .sort({ createdAt: -1 });
     // console.log("all orders: ", allOrders);
 
@@ -52,7 +52,6 @@ const getMyOrders = async (req, res) => {
 
       return {
         _id: order._id,
-        eventTitle: order.eventId?.title || "Untitled Event",
         eventId: order.eventId,
         eventDate: order.eventId?.date || "N/A",
         bookingId: order.bookingId,
@@ -69,7 +68,7 @@ const getMyOrders = async (req, res) => {
       success: true,
       message: "Orders fetched successfully",
       totalOrders: filteredOrders.length,
-      data: filteredOrders,
+      data: updatedOrders,
     });
   } catch (error) {
     console.error("Error in getMyOrders:", error);

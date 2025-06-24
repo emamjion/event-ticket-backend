@@ -66,28 +66,27 @@ const getSeatsByEvent = async (req, res) => {
   }
 
   try {
-    // Step 1: Find all successful and visible orders for the event
+    // Step 1: Find orders with successful payment and visible to user
     const orders = await OrderModel.find({
       eventId,
-      paymentStatus: "success", // Only successful payments
-      isUserVisible: true, // Not cancelled or hidden
-    }).select("seats"); // We only need seat data
+      paymentStatus: "success",
+      isUserVisible: true,
+    }).select("seats");
 
-    // Step 2: Flatten all seats from orders
+    // Step 2: Flatten all current seat objects from those orders
     const bookedSeats = orders.flatMap((order) => order.seats);
 
-    // Step 3: Send response
     return res.status(200).json({
       success: true,
-      message: "Booked seats fetched successfully",
+      message: "Seats fetched successfully",
       totalSeats: bookedSeats.length,
       seats: bookedSeats,
     });
   } catch (error) {
-    console.error("Get booked seats error:", error);
+    console.error("Error fetching booked seats:", error);
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error while fetching seats",
       error: error.message,
     });
   }

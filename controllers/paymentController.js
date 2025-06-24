@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Stripe from "stripe";
+import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
@@ -264,6 +265,18 @@ const confirmPayment = async (req, res) => {
     };
 
     await OrderModel.create(orderData);
+
+    // mail functionality
+    const mailOpytions = {
+      from: process.env.SENDER_EMAIL,
+      to: req.user.email,
+      subject: "Your Event Ticket Confirmation",
+      html: `
+        <h1>Dear, ${req.user.name}</h1>
+        <p>This is your ticket</p>
+      `,
+    };
+    await transporter.sendMail(mailOpytions);
 
     res.status(200).json({
       success: true,

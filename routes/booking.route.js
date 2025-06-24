@@ -3,10 +3,11 @@ import {
   bookSeats,
   cancelReservedBooking,
   checkSeatsAvailability,
-  getBookedSeats,
+  // getBookedSeats,
   getBookingsByBuyer,
   reserveSeatsByStaff,
 } from "../controllers/booking.controller.js";
+import { getSeatsByEvent } from "../controllers/seat.controller.js";
 import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
@@ -25,7 +26,7 @@ bookingRouter.post(
   verifySellerOrAdmin,
   reserveSeatsByStaff
 );
-bookingRouter.get("/booked-seats/:eventId", verifyToken, getBookedSeats);
+bookingRouter.get("/booked-seats/:eventId", verifyToken, getSeatsByEvent);
 bookingRouter.post("/check-seats", verifyToken, checkSeatsAvailability);
 
 // bookingRouter.patch("/expire-bookings", verifyToken, expireOldBookings);

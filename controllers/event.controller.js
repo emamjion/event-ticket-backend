@@ -10,7 +10,7 @@ const getSellerId = async (user) => {
     if (!seller) throw new Error("Seller not found");
     return seller._id;
   } else if (user.role === "admin") {
-    return user.id; // Use admin's userId directly
+    return user.id; 
   } else {
     throw new Error("Unauthorized");
   }
@@ -21,6 +21,8 @@ const createEvent = async (req, res) => {
   try {
     const sellerId = await getSellerId(req.user);
 
+    console.log("seller id: ", sellerId);
+
     const {
       title,
       description,
@@ -29,12 +31,12 @@ const createEvent = async (req, res) => {
       location,
       contactNumber,
       email,
-      priceRange,
+      // priceRange,
       price,
     } = req.body;
 
-    const parsedPriceRange =
-      typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
+    // const parsedPriceRange =
+    //   typeof priceRange === "string" ? JSON.parse(priceRange) : priceRange;
 
     const image = req.file;
     if (!image) {
@@ -69,7 +71,7 @@ const createEvent = async (req, res) => {
       image: imageUrl,
       contactNumber,
       email,
-      priceRange: parsedPriceRange,
+      // priceRange: parsedPriceRange,
       price: Number(price),
       isPublished: false,
       ticketSold: 0,
@@ -130,7 +132,6 @@ const updateEvent = async (req, res) => {
     if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path);
       req.body.image = result.secure_url;
-
 
       fs.unlinkSync(req.file.path);
     }

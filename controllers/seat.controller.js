@@ -73,9 +73,9 @@ const getSeatsByEvent = async (req, res) => {
       isUserVisible: true,
     }).select("seats");
 
-
     // Step 2: Flatten all current seat objects from those orders
     const bookedSeats = orders.flatMap((order) => order.seats);
+    console.log("book seat", bookedSeats);
 
     return res.status(200).json({
       success: true,

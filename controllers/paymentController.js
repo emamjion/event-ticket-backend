@@ -4,6 +4,8 @@ import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
+import generateTicketPDF from "../utils/generateTicketPDF.js";
+import sendTicketEmail from "../utils/sendTicketEmail.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -240,6 +242,18 @@ const confirmPayment = async (req, res) => {
     booking.status = "success";
     booking.isUserVisible = true;
     await booking.save();
+
+    // if recipient email exists, send ticket
+    if (booking.recipientEmail) {
+      const pdfBuffer = await generateTicketPDF(booking);
+      await sendTicketEmail({
+        to: booking.recipientEmail,
+        subject: "You've received an event ticket",
+        note: booking.note,
+        pdfBuffer,
+        filename: `ticket-${booking._id}.pdf`,
+      });
+    }
 
     // 3. Check if order already exists to prevent duplicate
     const existingOrder = await OrderModel.findOne({ bookingId: booking._id });

@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import transporter from "../config/nodeMailer.js";
 import UserModel from "../models/userModel.js";
 import { createToken } from "../utils/jwtToken.js";
 
@@ -73,6 +74,16 @@ const createUser = async (req, res) => {
     });
 
     await newUser.save();
+
+    // Sending welcome email
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: email,
+      subject: "Welcome to Events n Tickets",
+      text: `Welcome to Events n Tickets website. Your account has been created with email: ${email}`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     res.status(201).json({
       success: true,
@@ -176,4 +187,28 @@ const logoutUser = async (req, res) => {
   }
 };
 
-export { createUser, loginUser, logoutUser };
+// Send verification OTP to the User's Email
+const sendVerifyOtp = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const user = await UserModel.findById(userId);
+    if (user.isAccountVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Account has already been verified.",
+      });
+    }
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    user.verifyOtp
+
+
+  } catch (error) {
+    console.log("Error in Send Verify OTP: ", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export { createUser, loginUser, logoutUser, sendVerifyOtp };

@@ -16,114 +16,6 @@ const getSellerId = async (user) => {
   }
 };
 
-// without single seat price
-// const bookSeats = async (req, res) => {
-//   const { eventId, buyerId, seats, totalAmount } = req.body;
-
-//   if (!eventId || !buyerId || !Array.isArray(seats) || seats.length === 0) {
-//     return res.status(400).json({ message: "Missing or invalid fields." });
-//   }
-
-//   try {
-//     const event = await EventModel.findById(eventId);
-//     if (!event) return res.status(404).json({ message: "Event not found." });
-
-//     const unavailableSeats = seats.filter((seat) =>
-//       event.seats.some(
-//         (s) =>
-//           s.section === seat.section &&
-//           s.row === seat.row &&
-//           s.seatNumber === seat.seatNumber
-//       )
-//     );
-
-//     if (unavailableSeats.length > 0) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Some seats are already booked or unavailable.",
-//         unavailableSeats,
-//       });
-//     }
-
-//     const newBooking = new BookingModel({
-//       eventId,
-//       buyerId,
-//       seats,
-//       totalAmount,
-//       isPaid: false,
-//       status: "pending",
-//     });
-
-//     await newBooking.save();
-
-//     event.seats.push(...seats);
-//     event.soldTickets.push(...seats);
-//     event.ticketSold += seats.length;
-//     event.ticketsAvailable -= seats.length;
-
-//     await event.save();
-
-//     // Auto cancel booking after 10 minutes if not paid
-//     setTimeout(async () => {
-//       const stillPending = await BookingModel.findById(newBooking._id);
-
-//       if (stillPending && !stillPending.isPaid) {
-//         console.log("⏱️ Auto cancelling unpaid booking: ", newBooking._id);
-
-//         // step:1. Cancel the booking
-//         stillPending.status = "cancelled";
-//         stillPending.isTicketAvailable = false;
-//         stillPending.isUserVisible = false;
-//         await stillPending.save();
-
-//         // step:2. Return the seats to the event
-//         const originalEvent = await EventModel.findById(eventId);
-//         if (originalEvent) {
-//           stillPending.seats.forEach((seat) => {
-//             originalEvent.seats = originalEvent.seats.filter(
-//               (s) =>
-//                 !(
-//                   s.section === seat.section &&
-//                   s.row === seat.row &&
-//                   s.seatNumber === seat.seatNumber
-//                 )
-//             );
-
-//             originalEvent.soldTickets = originalEvent.soldTickets.filter(
-//               (s) =>
-//                 !(
-//                   s.section === seat.section &&
-//                   s.row === seat.row &&
-//                   s.seatNumber === seat.seatNumber
-//                 )
-//             );
-//           });
-
-//           originalEvent.ticketSold -= stillPending.seats.length;
-//           originalEvent.ticketsAvailable += stillPending.seats.length;
-
-//           await originalEvent.save();
-//         }
-
-//         // step:3. Hide from order table
-//         await OrderModel.findOneAndUpdate(
-//           { bookingId: stillPending._id },
-//           { isUserVisible: false }
-//         );
-//       }
-//     }, 10 * 60 * 1000); // 10 minutes in milliseconds
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Booking created and seats locked. Waiting for payment.",
-//       bookingId: newBooking._id,
-//     });
-//   } catch (error) {
-//     console.error("Booking error:", error);
-//     res.status(500).json({ message: "Internal Server Error", error });
-//   }
-// };
-
 // with single seat price
 const bookSeats = async (req, res) => {
   const { eventId, buyerId, seats } = req.body;
@@ -561,6 +453,36 @@ const checkSeatsAvailability = async (req, res) => {
   }
 };
 
+// function to save optional info
+const saveOptionalInfo = async (req, res) => {
+  try {
+    const { bookingId, recipientEmail, note } = req.body;
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    // update optional fields
+    booking.recipientEmail = recipientEmail;
+    booking.note = note;
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Info Saved Successfully",
+    });
+  } catch (error) {
+    console.log("Error in save optional error: ", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Save optional Error",
+    });
+  }
+};
+
 export {
   bookSeats,
   cancelReservedBooking,
@@ -568,4 +490,5 @@ export {
   getBookedSeats,
   getBookingsByBuyer,
   reserveSeatsByStaff,
+  saveOptionalInfo,
 };

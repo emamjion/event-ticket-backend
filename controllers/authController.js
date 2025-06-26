@@ -190,8 +190,8 @@ const logoutUser = async (req, res) => {
 // Send verification OTP to the User's Email
 const sendVerifyOtp = async (req, res) => {
   try {
-    const { userId } = req.body;
-    const user = await UserModel.findById(userId);
+    const { id } = req.user;
+    const user = await UserModel.findById(id);
     if (user.isAccountVerified) {
       return res.status(400).json({
         success: false,
@@ -199,16 +199,110 @@ const sendVerifyOtp = async (req, res) => {
       });
     }
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    user.verifyOtp
+    user.verifyOtp = otp;
+    user.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
+    await user.save();
 
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: user.email,
+      subject: "Account Verification OTP",
+      text: `Your OTP is ${otp}. Verify your account using this OTP.`,
+    };
 
+    res.status(200).json({
+      success: true,
+      message: `Verification OTP sent on your Email: ${user.email}`,
+    });
+
+    await transporter.sendMail(mailOptions);
   } catch (error) {
     console.log("Error in Send Verify OTP: ", error.message);
     res.status(500).json({
       success: false,
       message: "Internal server error",
+      error: error.message,
     });
   }
 };
 
-export { createUser, loginUser, logoutUser, sendVerifyOtp };
+// function to verify email using otp
+const verifyEmail = async (req, res) => {
+  const { id } = req.user;
+  const { otp } = req.body;
+  if (!id || !otp) {
+    return (
+      res.status(400),
+      json({
+        success: false,
+        message: "Missing details",
+      })
+    );
+  }
+
+  try {
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.verifyOtp === "" || user.verifyOtp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    if (user.verifyOtpExpireAt < Date.now()) {
+      return res.statu(400).json({
+        success: false,
+        message: "OTP Expired",
+      });
+    }
+    user.isAccountVerified = true;
+    user.verifyOtp = "";
+    user.verifyOtpExpireAt = 0;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    console.log("Error in Verify Email: ", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Verify Email Error",
+      error: error.message,
+    });
+  }
+};
+
+// check user is authenticated
+const isAuthenticated = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "Authenticated!",
+    });
+  } catch (error) {
+    console.log("Error in authenticated controller: ", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Authenticated controller error",
+      error: error.message,
+    });
+  }
+};
+
+export {
+  createUser,
+  isAuthenticated,
+  loginUser,
+  logoutUser,
+  sendVerifyOtp,
+  verifyEmail,
+};

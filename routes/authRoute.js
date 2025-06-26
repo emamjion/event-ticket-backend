@@ -1,8 +1,11 @@
 import express from "express";
 import {
   createUser,
+  isAuthenticated,
   loginUser,
   logoutUser,
+  sendVerifyOtp,
+  verifyEmail,
 } from "../controllers/authController.js";
 import {
   changePassword,
@@ -35,5 +38,11 @@ authRouter.delete("/profile", verifyToken, deleteAccount);
 authRouter.put("/change-password", verifyToken, changePassword);
 authRouter.post("/forget-password", verifyToken, forgotPassword);
 authRouter.post("/reset-password/:token", verifyToken, resetPassword);
+
+// send verify otp route
+authRouter.post("/send-verify-otp", verifyToken, sendVerifyOtp);
+// verify account route
+authRouter.post("/verify-account", verifyToken, verifyEmail);
+authRouter.post("/is-auth", verifyToken, isAuthenticated);
 
 export default authRouter;

@@ -243,6 +243,8 @@ const confirmPayment = async (req, res) => {
     booking.isUserVisible = true;
     await booking.save();
 
+    console.log("RecipientEmail", booking.recipientEmail);
+
     // if recipient email exists, send ticket
     if (booking.recipientEmail) {
       const pdfBuffer = await generateTicketPDF(booking);

@@ -40,9 +40,11 @@ const bookingSchema = new mongoose.Schema({
   },
   recipientEmail: {
     type: String,
+    default: null,
   },
   note: {
     type: String,
+    default: "",
   },
 });
 

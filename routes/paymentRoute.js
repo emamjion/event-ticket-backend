@@ -16,12 +16,7 @@ const paymentRouter = express.Router();
 paymentRouter.post("/create-payment", verifyToken, createPayment);
 paymentRouter.post("/confirm-payment", verifyToken, confirmPayment);
 paymentRouter.post("/booking/cancel", verifyToken, cancelBooking);
-paymentRouter.post(
-  "/refund/:orderId",
-  verifyToken,
-  verifyAdmin,
-  refundAndCancel
-);
+paymentRouter.post("/refund", verifyToken, verifyAdmin, refundAndCancel);
 
 // for seller and admin
 paymentRouter.get(

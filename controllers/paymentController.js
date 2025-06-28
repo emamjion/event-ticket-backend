@@ -694,7 +694,7 @@ const getCancelledOrders = async (req, res) => {
 
 const refundAndCancel = async (req, res) => {
   try {
-    const { orderId, seatToCancel } = req.body;
+    const { paymentIntentId, seatToCancel } = req.body;
 
     if (!orderId || !seatToCancel) {
       return res.status(400).json({

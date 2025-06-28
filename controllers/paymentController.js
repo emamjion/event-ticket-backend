@@ -654,6 +654,13 @@ const refundBooking = async (req, res) => {
       });
     }
 
+    if (order.paymentStatus === "refunded") {
+      return res.status(400).json({
+        success: false,
+        message: "Order already refunded",
+      });
+    }
+
     if (!order.paymentIntentId) {
       return res.status(400).json({
         success: false,

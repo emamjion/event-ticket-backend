@@ -34,6 +34,11 @@ const orderSchema = new mongoose.Schema(
       enum: ["success", "failed", "refunded"],
       default: "success",
     },
+    status: {
+      type: String,
+      enum: ["success", "cancelled", "reserved", "refunded", "cancelled"],
+      default: "success",
+    },
     // paymentIntentId: String,
     paymentIntentId: { type: String, required: true },
     orderTime: {

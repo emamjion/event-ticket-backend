@@ -36,7 +36,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["success", "cancelled", "reserved", "refunded", "cancelled"],
+      enum: ["success", "cancelled", "reserved", "refunded"],
       default: "success",
     },
     ticketStatus: {

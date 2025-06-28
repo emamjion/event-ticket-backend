@@ -5,7 +5,7 @@ import {
   confirmPayment,
   createPayment,
   getCancelledOrders,
-  refundBooking,
+  refundAndCancel,
 } from "../controllers/paymentController.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifySellerOrAdmin from "../middleware/verifySellerOrAdmin.js";
@@ -16,7 +16,14 @@ const paymentRouter = express.Router();
 paymentRouter.post("/create-payment", verifyToken, createPayment);
 paymentRouter.post("/confirm-payment", verifyToken, confirmPayment);
 paymentRouter.post("/booking/cancel", verifyToken, cancelBooking);
-paymentRouter.post("/refund/:orderId", verifyToken, verifyAdmin, refundBooking);
+paymentRouter.post(
+  "/refund/:orderId",
+  verifyToken,
+  verifyAdmin,
+  refundAndCancel
+);
+
+// for seller and admin
 paymentRouter.get(
   "/cancelled-bookings",
   verifyToken,

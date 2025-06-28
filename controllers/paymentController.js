@@ -641,51 +641,122 @@ const getCancelledOrders = async (req, res) => {
 };
 
 // function to refund for admin
-const refundBooking = async (req, res) => {
-  const { orderId } = req.params;
+// const refundBooking = async (req, res) => {
+//   const { orderId } = req.params;
 
+//   try {
+//     const order = await OrderModel.findById(orderId);
+
+//     if (!order) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Order not found",
+//       });
+//     }
+
+//     if (order.paymentStatus === "refunded") {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Order already refunded",
+//       });
+//     }
+
+//     if (!order.paymentIntentId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "No paymentIntentId found for this booking",
+//       });
+//     }
+
+//     // Create refund
+//     const refund = await stripe.refunds.create({
+//       payment_intent: order.paymentIntentId,
+//     });
+
+//     // Optionally update booking status
+//     order.paymentStatus = "refunded";
+//     order.status = "cancelled";
+//     await order.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Refund successful",
+//       refundDetails: refund,
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Refund failed",
+//       error: error.message,
+//     });
+//   }
+// };
+
+const refundAndCancel = async (req, res) => {
   try {
+    const { orderId, seatToCancel } = req.body;
+
+    if (!orderId || !seatToCancel) {
+      return res.status(400).json({
+        message: "Order ID and seat to cancel are required.",
+      });
+    }
+
+    const { section, row, seatNumber, price } = seatToCancel;
+
+    if (typeof price !== "number") {
+      return res.status(400).json({
+        message: "Seat price must be provided for cancellation.",
+      });
+    }
+
     const order = await OrderModel.findById(orderId);
-
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+      return res.status(404).json({ message: "Order not found." });
     }
 
-    if (order.paymentStatus === "refunded") {
-      return res.status(400).json({
-        success: false,
-        message: "Order already refunded",
-      });
+    // Find seat in order
+    const seatIndex = order.seats.findIndex(
+      (seat) =>
+        seat.section === section &&
+        seat.row === row &&
+        seat.seatNumber === seatNumber
+    );
+
+    if (seatIndex === -1) {
+      return res
+        .status(404)
+        .json({ message: "Seat not found or already removed." });
     }
 
+    // Refund that seat's amount
     if (!order.paymentIntentId) {
-      return res.status(400).json({
-        success: false,
-        message: "No paymentIntentId found for this booking",
-      });
+      return res
+        .status(400)
+        .json({ message: "No payment intent found for refund." });
     }
 
-    // Create refund
     const refund = await stripe.refunds.create({
       payment_intent: order.paymentIntentId,
+      amount: Math.floor(price * 100), // Stripe needs cents
     });
 
-    // Optionally update booking status
-    order.status = "refunded";
+    // Remove seat from the order
+    order.seats.splice(seatIndex, 1);
+    order.totalAmount = Math.max(0, order.totalAmount - price);
+    order.quantity = order.seats.length;
+
     await order.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Refund successful",
-      refundDetails: refund,
+    return res.status(200).json({
+      message: "Seat cancelled and refund successful.",
+      refund,
+      updatedOrder: order,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Refund failed",
+    console.error("Cancel Seat Error:", error);
+    return res.status(500).json({
+      message: "Internal server error.",
       error: error.message,
     });
   }
@@ -696,5 +767,5 @@ export {
   confirmPayment,
   createPayment,
   getCancelledOrders,
-  refundBooking,
+  refundAndCancel,
 };

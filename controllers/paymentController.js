@@ -640,4 +640,54 @@ const getCancelledOrders = async (req, res) => {
   });
 };
 
-export { cancelBooking, confirmPayment, createPayment, getCancelledOrders };
+// function to refund for admin
+const refundBooking = async (req, res) => {
+  const { orderId } = req.params;
+
+  try {
+    const order = await OrderModel.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (!order.paymentIntentId) {
+      return res.status(400).json({
+        success: false,
+        message: "No paymentIntentId found for this booking",
+      });
+    }
+
+    // Create refund
+    const refund = await stripe.refunds.create({
+      payment_intent: order.paymentIntentId,
+    });
+
+    // Optionally update booking status
+    order.status = "refunded";
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Refund successful",
+      refundDetails: refund,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Refund failed",
+      error: error.message,
+    });
+  }
+};
+
+export {
+  cancelBooking,
+  confirmPayment,
+  createPayment,
+  getCancelledOrders,
+  refundBooking,
+};

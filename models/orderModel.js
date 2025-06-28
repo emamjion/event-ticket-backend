@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true },
     paymentStatus: {
       type: String,
-      enum: ["success", "failed"],
+      enum: ["success", "failed", "refunded"],
       default: "success",
     },
     // paymentIntentId: String,

@@ -5,6 +5,7 @@ import {
   blockUserById,
   deleteUser,
   denySellerRequest,
+  getAllBookings,
   getAllEventsForAdmin,
   getAllSoldTickets,
   getAllTransactions,
@@ -106,7 +107,7 @@ adminRouter.get(
   generateTransactionReport
 );
 
-// get all sellers
-// adminRouter.get("/all-seller", verifyToken, verifyAdmin, getAllSellers);
+// get all bookings
+adminRouter.get("/all-bookings", verifyToken, verifyAdmin, getAllBookings);
 
 export default adminRouter;

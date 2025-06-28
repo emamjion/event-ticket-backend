@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Parser } from "json2csv";
 import jwt from "jsonwebtoken";
+import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
 import SellerModel from "../models/sellerModel.js";
@@ -585,12 +586,35 @@ const getAllTransactions = async (req, res) => {
   }
 };
 
+// function to all bookings
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await BookingModel.find()
+      .populate("buyerId", "name email")
+      .populate("eventId", "title date");
+
+    res.status(200).json({
+      success: true,
+      totalBookings: bookings.length,
+      message: "All bookings fetched successfully",
+      data: bookings,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch bookings",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   approveSellerRequest,
   blockUserById,
   deleteUser,
   denySellerRequest,
+  getAllBookings,
   getAllEventsForAdmin,
   getAllSellers,
   getAllSoldTickets,

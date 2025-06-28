@@ -39,6 +39,11 @@ const orderSchema = new mongoose.Schema(
       enum: ["success", "cancelled", "reserved", "refunded", "cancelled"],
       default: "success",
     },
+    ticketStatus: {
+      type: String,
+      enum: ["unused", "used"],
+      default: "unused",
+    },
     // paymentIntentId: String,
     paymentIntentId: { type: String, required: true },
     orderTime: {

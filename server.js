@@ -14,6 +14,7 @@ import orderRouter from "./routes/orderRoute.js";
 import paymentRouter from "./routes/paymentRoute.js";
 import sellerRequestRouter from "./routes/sellerRequestRoute.js";
 import sellerRouter from "./routes/sellerRoute.js";
+import ticketRouter from "./routes/ticket.route.js";
 import userRouter from "./routes/userRoute.js";
 import withdrawalRouter from "./routes/withdrawal.route.js";
 // import jwtRouter from "./routes/jwtRoute.js";
@@ -50,6 +51,7 @@ app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/withdraw", withdrawalRouter);
 app.use("/api/v1/coupons", couponRouter);
 app.use("/api/v1/blogs", blogRouter);
+app.use("/api/v1/tickets", ticketRouter);
 
 // JWT route (optional)
 // app.use("/api", jwtRouter);

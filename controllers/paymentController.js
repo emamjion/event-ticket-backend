@@ -738,15 +738,38 @@ const refundAndCancel = async (req, res) => {
 
     const refund = await stripe.refunds.create({
       payment_intent: order.paymentIntentId,
-      amount: Math.floor(price * 100), // Stripe needs cents
+      amount: Math.floor(price * 100), // Stripe uses cents
     });
 
-    // Remove seat from the order
+    // Remove seat from order
     order.seats.splice(seatIndex, 1);
     order.totalAmount = Math.max(0, order.totalAmount - price);
     order.quantity = order.seats.length;
-
     await order.save();
+
+    // Remove seat from event.seats & event.soldTickets
+    const event = await EventModel.findById(order.eventId);
+    if (event) {
+      event.seats = event.seats.filter(
+        (s) =>
+          !(
+            s.section === section &&
+            s.row === row &&
+            s.seatNumber === seatNumber
+          )
+      );
+      event.soldTickets = event.soldTickets.filter(
+        (s) =>
+          !(
+            s.section === section &&
+            s.row === row &&
+            s.seatNumber === seatNumber
+          )
+      );
+      event.ticketSold -= 1;
+      event.ticketsAvailable += 1;
+      await event.save();
+    }
 
     return res.status(200).json({
       message: "Seat cancelled and refund successful.",

@@ -696,7 +696,7 @@ const refundAndCancel = async (req, res) => {
   try {
     const { paymentIntentId, seatToCancel } = req.body;
 
-    if (!orderId || !seatToCancel) {
+    if (!paymentIntentId || !seatToCancel) {
       return res.status(400).json({
         message: "Order ID and seat to cancel are required.",
       });

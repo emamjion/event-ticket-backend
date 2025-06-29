@@ -3,10 +3,10 @@ import transporter from "../config/nodeMailer.js";
 import UserModel from "../models/userModel.js";
 import { createToken } from "../utils/jwtToken.js";
 
-// create user route
+// create user normal system
 // const createUser = async (req, res) => {
 //   try {
-//     const { name, email, password } = req.body;
+//     const { name, email, password, contactNumber } = req.body;
 
 //     // Check if user already exists
 //     const existingUser = await UserModel.findOne({ email });
@@ -21,14 +21,24 @@ import { createToken } from "../utils/jwtToken.js";
 //     const salt = await bcrypt.genSalt(10);
 //     const hashedPassword = await bcrypt.hash(password, salt);
 
-//     // Create new user with hashed password
 //     const newUser = new UserModel({
 //       name,
 //       email,
 //       password: hashedPassword,
+//       contactNumber,
 //     });
 
 //     await newUser.save();
+
+//     // Sending welcome email
+//     const mailOptions = {
+//       from: process.env.SENDER_EMAIL,
+//       to: email,
+//       subject: "Welcome to Events n Tickets",
+//       text: `Welcome to Events n Tickets website. Your account has been created with email: ${email}`,
+//     };
+
+//     await transporter.sendMail(mailOptions);
 
 //     res.status(201).json({
 //       success: true,
@@ -37,7 +47,9 @@ import { createToken } from "../utils/jwtToken.js";
 //         _id: newUser._id,
 //         name: newUser.name,
 //         email: newUser.email,
+//         role: newUser.role,
 //         password: "*****",
+//         contactNumber: contactNumber,
 //       },
 //     });
 //   } catch (error) {
@@ -62,43 +74,52 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Hash the password
+    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Generate OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
+
+    // Create new user with OTP
     const newUser = new UserModel({
       name,
       email,
       password: hashedPassword,
       contactNumber,
+      verifyOtp: otp,
+      verifyOtpExpireAt: otpExpireAt,
+      isAccountVerified: false,
     });
 
     await newUser.save();
 
-    // Sending welcome email
+    // Welcome email + OTP
     const mailOptions = {
       from: process.env.SENDER_EMAIL,
       to: email,
-      subject: "Welcome to Events n Tickets",
-      text: `Welcome to Events n Tickets website. Your account has been created with email: ${email}`,
+      subject: "Welcome to Events n Tickets - Verify Your Account",
+      html: `
+        <h3>Hello ${name},</h3>
+        <p>Welcome to <strong>Events n Tickets</strong>!</p>
+        <p>Your account has been created successfully. To activate your account, please use the OTP below:</p>
+        <h2>${otp}</h2>
+        <p>This OTP is valid for 24 hours.</p>
+        <br/>
+        <p>Thank you,<br/>Events n Tickets Team</p>
+      `,
     };
 
     await transporter.sendMail(mailOptions);
 
     res.status(201).json({
       success: true,
-      message: "User created successfully",
-      data: {
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        password: "*****",
-        contactNumber: contactNumber,
-      },
+      message: "Account created. OTP sent to your email.",
+      userId: newUser._id,
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: "Failed to create user",
       error: error.message,
@@ -188,94 +209,139 @@ const logoutUser = async (req, res) => {
 };
 
 // Send verification OTP to the User's Email
-const sendVerifyOtp = async (req, res) => {
-  try {
-    const { id } = req.user;
-    const user = await UserModel.findById(id);
-    if (user.isAccountVerified) {
-      return res.status(400).json({
-        success: false,
-        message: "Account has already been verified.",
-      });
-    }
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    user.verifyOtp = otp;
-    user.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
-    await user.save();
+// const sendVerifyOtp = async (req, res) => {
+//   try {
+//     const { id } = req.user;
+//     const user = await UserModel.findById(id);
+//     if (user.isAccountVerified) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Account has already been verified.",
+//       });
+//     }
+//     const otp = String(Math.floor(100000 + Math.random() * 900000));
+//     user.verifyOtp = otp;
+//     user.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
+//     await user.save();
 
-    const mailOptions = {
-      from: process.env.SENDER_EMAIL,
-      to: user.email,
-      subject: "Account Verification OTP",
-      text: `Your OTP is ${otp}. Verify your account using this OTP.`,
-    };
+//     const mailOptions = {
+//       from: process.env.SENDER_EMAIL,
+//       to: user.email,
+//       subject: "Account Verification OTP",
+//       text: `Your OTP is ${otp}. Verify your account using this OTP.`,
+//     };
 
-    res.status(200).json({
-      success: true,
-      message: `Verification OTP sent on your Email: ${user.email}`,
-    });
+//     res.status(200).json({
+//       success: true,
+//       message: `Verification OTP sent on your Email: ${user.email}`,
+//     });
 
-    await transporter.sendMail(mailOptions);
-  } catch (error) {
-    console.log("Error in Send Verify OTP: ", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+//     await transporter.sendMail(mailOptions);
+//   } catch (error) {
+//     console.log("Error in Send Verify OTP: ", error.message);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// };
 
 // function to verify email using otp
-const verifyEmail = async (req, res) => {
-  const { id } = req.user;
-  const { otp } = req.body;
-  if (!id || !otp) {
-    return (
-      res.status(400),
-      json({
-        success: false,
-        message: "Missing details",
-      })
-    );
-  }
+// const verifyEmail = async (req, res) => {
+//   const { id } = req.user;
+//   const { otp } = req.body;
+//   if (!id || !otp) {
+//     return (
+//       res.status(400),
+//       json({
+//         success: false,
+//         message: "Missing details",
+//       })
+//     );
+//   }
 
+//   try {
+//     const user = await UserModel.findById(id);
+//     if (!user) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "User not found",
+//       });
+//     }
+
+//     if (user.verifyOtp === "" || user.verifyOtp !== otp) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid OTP",
+//       });
+//     }
+
+//     if (user.verifyOtpExpireAt < Date.now()) {
+//       return res.statu(400).json({
+//         success: false,
+//         message: "OTP Expired",
+//       });
+//     }
+//     user.isAccountVerified = true;
+//     user.verifyOtp = "";
+//     user.verifyOtpExpireAt = 0;
+//     await user.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Email verified successfully",
+//     });
+//   } catch (error) {
+//     console.log("Error in Verify Email: ", error.message);
+//     res.status(500).json({
+//       success: false,
+//       message: "Verify Email Error",
+//       error: error.message,
+//     });
+//   }
+// };
+
+const verifyOtp = async (req, res) => {
   try {
-    const user = await UserModel.findById(id);
+    const { userId, otp } = req.body;
+    const user = await UserModel.findById(userId);
+
     if (!user) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
-    if (user.verifyOtp === "" || user.verifyOtp !== otp) {
+    if (user.isAccountVerified) {
       return res.status(400).json({
         success: false,
-        message: "Invalid OTP",
+        message: "Account already verified",
       });
     }
 
-    if (user.verifyOtpExpireAt < Date.now()) {
-      return res.statu(400).json({
+    if (user.verifyOtp !== otp || Date.now() > user.verifyOtpExpireAt) {
+      return res.status(400).json({
         success: false,
-        message: "OTP Expired",
+        message: "Invalid or expired OTP",
       });
     }
+
     user.isAccountVerified = true;
-    user.verifyOtp = "";
-    user.verifyOtpExpireAt = 0;
+    user.verifyOtp = null;
+    user.verifyOtpExpireAt = null;
+
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: "Email verified successfully",
+      message: "Account verified successfully. Please log in now.",
     });
   } catch (error) {
-    console.log("Error in Verify Email: ", error.message);
     res.status(500).json({
       success: false,
-      message: "Verify Email Error",
+      message: "OTP verification failed",
       error: error.message,
     });
   }
@@ -298,11 +364,4 @@ const isAuthenticated = async (req, res) => {
   }
 };
 
-export {
-  createUser,
-  isAuthenticated,
-  loginUser,
-  logoutUser,
-  sendVerifyOtp,
-  verifyEmail,
-};
+export { createUser, isAuthenticated, loginUser, logoutUser, verifyOtp };

@@ -4,8 +4,7 @@ import {
   isAuthenticated,
   loginUser,
   logoutUser,
-  sendVerifyOtp,
-  verifyEmail,
+  verifyOtp,
 } from "../controllers/authController.js";
 import {
   changePassword,
@@ -40,9 +39,9 @@ authRouter.post("/forget-password", verifyToken, forgotPassword);
 authRouter.post("/reset-password/:token", verifyToken, resetPassword);
 
 // send verify otp route
-authRouter.post("/send-verify-otp", verifyToken, sendVerifyOtp);
+// authRouter.post("/send-verify-otp", verifyToken, sendVerifyOtp);
 // verify account route
-authRouter.post("/verify-account", verifyToken, verifyEmail);
+authRouter.post("/verify-account", verifyOtp);
 authRouter.post("/is-auth", verifyToken, isAuthenticated);
 
 export default authRouter;

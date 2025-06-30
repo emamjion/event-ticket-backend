@@ -5,6 +5,7 @@ import {
   checkSeatsAvailability,
   // getBookedSeats,
   getBookingsByBuyer,
+  getBookingSessionTime,
   reserveSeatsByStaff,
   saveOptionalInfo,
 } from "../controllers/booking.controller.js";
@@ -37,6 +38,11 @@ bookingRouter.post(
   saveOptionalInfo
 );
 
-// bookingRouter.patch("/expire-bookings", verifyToken, expireOldBookings);
+// Get session start time of a booking
+bookingRouter.get(
+  "/booking-session/:bookingId",
+  verifyToken,
+  getBookingSessionTime
+);
 
 export default bookingRouter;

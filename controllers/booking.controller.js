@@ -59,8 +59,9 @@ const bookSeats = async (req, res) => {
       seats,
       totalAmount,
       isPaid: false,
+      sessionStartTime: new Date(),
       status: "pending",
-      isUserVisible: false, // important: will show in My Tickets only after payment
+      isUserVisible: false,
     });
 
     await newBooking.save();
@@ -130,6 +131,33 @@ const bookSeats = async (req, res) => {
   } catch (error) {
     console.error("Booking error:", error);
     res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+// function to get booking session time
+const getBookingSessionTime = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await BookingModel.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      sessionStartTime: booking.sessionStartTime,
+    });
+  } catch (error) {
+    console.error("Error fetching session time:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch session time",
+      error: error.message,
+    });
   }
 };
 
@@ -489,6 +517,7 @@ export {
   checkSeatsAvailability,
   getBookedSeats,
   getBookingsByBuyer,
+  getBookingSessionTime,
   reserveSeatsByStaff,
   saveOptionalInfo,
 };

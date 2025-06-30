@@ -30,6 +30,10 @@ const bookingSchema = new mongoose.Schema({
     enum: ["success", "cancelled", "pending", "reserved", "refunded"],
     default: "pending",
   },
+  sessionStartTime: {
+    type: Date,
+    default: null,
+  },
   isUserVisible: {
     type: Boolean,
     default: false,

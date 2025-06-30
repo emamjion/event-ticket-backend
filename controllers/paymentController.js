@@ -152,6 +152,7 @@ const createPayment = async (req, res) => {
       bookingId: booking._id,
       clientSecret: paymentIntent.client_secret,
       amount: booking.totalAmount,
+      paymentIntentId: booking.paymentIntentId,
     });
   } catch (error) {
     console.error("Create Payment error:", error);
@@ -243,8 +244,6 @@ const confirmPayment = async (req, res) => {
     booking.isUserVisible = true;
     await booking.save();
 
-    console.log("RecipientEmail", booking.recipientEmail);
-
     // if recipient email exists, send ticket
     if (booking.recipientEmail) {
       const pdfBuffer = await generateTicketPDF(booking);
@@ -267,7 +266,7 @@ const confirmPayment = async (req, res) => {
 
     const event = await EventModel.findById(booking.eventId);
 
-    const orderData = {
+    const newOrder = new OrderModel({
       bookingId: booking._id,
       buyerId: booking.buyerId,
       eventId: booking.eventId,
@@ -278,9 +277,22 @@ const confirmPayment = async (req, res) => {
       sellerId: event?.sellerId || null,
       quantity: booking.seats.length,
       isUserVisible: true,
-    };
+    });
+    // const orderData = {
+    //   bookingId: booking._id,
+    //   buyerId: booking.buyerId,
+    //   eventId: booking.eventId,
+    //   seats: booking.seats,
+    //   totalAmount: booking.totalAmount,
+    //   paymentStatus: "success",
+    //   paymentIntentId: booking.paymentIntentId,
+    //   sellerId: event?.sellerId || null,
+    //   quantity: booking.seats.length,
+    //   isUserVisible: true,
+    // };
 
-    await OrderModel.create(orderData);
+    // await OrderModel.create(orderData);
+    await newOrder.save();
 
     // mail functionality
     const mailOpytions = {
@@ -297,6 +309,8 @@ const confirmPayment = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Payment confirmed and order created.",
+      orderId: newOrder._id,
+      order: newOrder,
     });
   } catch (error) {
     console.error("Confirm Payment Error:", error);

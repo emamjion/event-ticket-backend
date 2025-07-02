@@ -213,85 +213,90 @@ const getBookingsByBuyer = async (req, res) => {
 
 // Cancel a booking (only if not paid)
 const cancelReservedBooking = async (req, res) => {
-  const { bookingId } = req.body;
+  const { bookingId, seatsToCancel } = req.body;
 
-  if (!bookingId) {
-    return res.status(400).json({ message: "Booking ID is required." });
+  if (
+    !bookingId ||
+    !Array.isArray(seatsToCancel) ||
+    seatsToCancel.length === 0
+  ) {
+    return res.status(400).json({ message: "Missing or invalid fields." });
   }
 
   try {
     const user = req.user;
+
+    // Get seller/admin ID
     const sellerId = await getSellerId(user);
 
+    // Find booking
     const booking = await BookingModel.findById(bookingId);
-    if (!booking)
+    if (!booking) {
       return res.status(404).json({ message: "Booking not found." });
+    }
 
+    // Authorization: Ensure user owns this booking
     if (booking.buyerId.toString() !== sellerId.toString()) {
       return res
         .status(403)
-        .json({ message: "Unauthorized to cancel this booking." });
+        .json({ message: "Unauthorized access to this booking." });
     }
 
-    if (booking.status === "cancelled") {
-      return res.status(400).json({ message: "Booking already cancelled." });
-    }
+    // Filter out seats to cancel
+    const remainingSeats = booking.seats.filter(
+      (seat) =>
+        !seatsToCancel.some(
+          (s) =>
+            s.section === seat.section &&
+            s.row === seat.row &&
+            s.seatNumber === seat.seatNumber
+        )
+    );
 
-    if (booking.isPaid) {
-      return res.status(400).json({
-        message: "Paid booking can't be cancelled here. Please refund instead.",
+    // No seats left? Delete booking
+    if (remainingSeats.length === 0) {
+      await BookingModel.findByIdAndDelete(bookingId);
+
+      // Update event stats (optional)
+      const event = await EventModel.findById(booking.eventId);
+      if (event) {
+        event.ticketSold -= booking.seats.length;
+        event.ticketsAvailable += booking.seats.length;
+        await event.save();
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "All seats cancelled and booking deleted.",
       });
     }
 
+    // Update booking with remaining seats
+    const seatsCancelled = booking.seats.length - remainingSeats.length;
+
+    booking.seats = remainingSeats;
+    await booking.save();
+
+    // Update event stats
     const event = await EventModel.findById(booking.eventId);
-    if (!event) return res.status(404).json({ message: "Event not found." });
+    if (event) {
+      event.ticketSold -= seatsCancelled;
+      event.ticketsAvailable += seatsCancelled;
+      await event.save();
+    }
 
-    // Remove seats from event
-    booking.seats.forEach((seat) => {
-      event.seats = event.seats.filter(
-        (s) =>
-          !(
-            s.section === seat.section &&
-            s.row === seat.row &&
-            s.seatNumber === seat.seatNumber
-          )
-      );
-
-      event.soldTickets = event.soldTickets.filter(
-        (s) =>
-          !(
-            s.section === seat.section &&
-            s.row === seat.row &&
-            s.seatNumber === seat.seatNumber
-          )
-      );
-    });
-
-    event.ticketSold -= booking.seats.length;
-    event.ticketsAvailable += booking.seats.length;
-
-    // Update booking
-    booking.status = "cancelled";
-    booking.isTicketAvailable = false;
-    booking.isUserVisible = false;
-    booking.isPaid = false;
-
-    // Save both
-    await Promise.all([booking.save(), event.save()]);
-
-    // Optional: Hide from order table if exists
-    await OrderModel.findOneAndUpdate(
-      { bookingId: booking._id },
-      { isUserVisible: false }
-    );
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Reserved booking cancelled successfully and seats released.",
+      message: "Selected seat(s) cancelled successfully.",
+      remainingSeats: booking.seats,
     });
-  } catch (err) {
-    console.error("Cancel Reserved Booking Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+  } catch (error) {
+    console.error("Cancel reserved seats error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -455,7 +460,6 @@ const getBookedSeats = async (req, res) => {
       });
     }
 
-    // ✅ Include reserved, pending, and success bookings
     const bookings = await BookingModel.find({
       eventId,
       status: { $in: ["reserved", "pending", "success"] },

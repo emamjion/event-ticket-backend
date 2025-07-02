@@ -455,10 +455,10 @@ const getBookedSeats = async (req, res) => {
       });
     }
 
-    // Only fetch bookings that are not cancelled
+    // ✅ Include reserved, pending, and success bookings
     const bookings = await BookingModel.find({
       eventId,
-      status: { $ne: "cancelled" }, // Exclude cancelled bookings
+      status: { $in: ["reserved", "pending", "success"] },
     });
 
     const seatMap = [];
@@ -466,16 +466,22 @@ const getBookedSeats = async (req, res) => {
     bookings.forEach((booking) => {
       booking.seats.forEach((seat) => {
         seatMap.push({
-          ...seat.toObject(),
-          status: booking.status, // 'booked' or 'reserved'
+          section: seat.section,
+          row: seat.row,
+          seatNumber: seat.seatNumber,
+          price: seat.price,
+          status: booking.status,
           isPaid: booking.isPaid,
+          bookingId: booking._id,
         });
       });
     });
 
+    console.log("Total seats returned:", seatMap.length);
+
     res.status(200).json({
       success: true,
-      message: "Seats fetched successfully",
+      message: "Seats fetched successfully!!!!!!",
       totalSeats: seatMap.length,
       seats: seatMap,
     });

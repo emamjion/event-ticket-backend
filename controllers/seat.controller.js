@@ -1,4 +1,5 @@
-import OrderModel from "../models/orderModel.js";
+import BookingModel from "../models/booking.model.js";
+import EventModel from "../models/eventModel.js";
 import SeatModel from "../models/seat.model.js";
 
 // Add multiple seats for an event
@@ -66,18 +67,37 @@ const getSeatsByEvent = async (req, res) => {
   }
 
   try {
-    // Step 1: Find orders with successful payment and visible to user
-    const orders = await OrderModel.find({
+    const event = await EventModel.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    const bookings = await BookingModel.find({
       eventId,
-      paymentStatus: "success",
-      isUserVisible: true,
-    }).select("seats");
+      status: { $in: ["reserved", "success"] },
+    });
 
-    // Step 2: Flatten all current seat objects from those orders
-    const bookedSeats = orders.flatMap((order) => order.seats);
-    console.log("book seat", bookedSeats);
+    // 📦 Flatten seat data
+    const bookedSeats = [];
 
-    return res.status(200).json({
+    bookings.forEach((booking) => {
+      booking.seats.forEach((seat) => {
+        bookedSeats.push({
+          section: seat.section,
+          row: seat.row,
+          seatNumber: seat.seatNumber,
+          price: seat.price,
+          status: booking.status,
+          isPaid: booking.isPaid,
+          bookingId: booking._id,
+        });
+      });
+    });
+
+    res.status(200).json({
       success: true,
       message: "Seats fetched successfully",
       totalSeats: bookedSeats.length,

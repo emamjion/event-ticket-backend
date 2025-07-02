@@ -18,6 +18,7 @@ import ticketRouter from "./routes/ticket.route.js";
 import userRouter from "./routes/userRoute.js";
 import withdrawalRouter from "./routes/withdrawal.route.js";
 // import jwtRouter from "./routes/jwtRoute.js";
+import "./utils/cron/bookingCleanup.js";
 
 const app = express();
 const port = process.env.PORT || 5001;

@@ -31,15 +31,38 @@ const bookSeats = async (req, res) => {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    // Seat availability check
-    const unavailableSeats = seats.filter((seat) =>
-      event.seats.some(
-        (s) =>
-          s.section === seat.section &&
-          s.row === seat.row &&
-          s.seatNumber === seat.seatNumber
-      )
-    );
+    // Check if seats are already held in pending bookings (not expired)
+    const now = new Date();
+    const conflictingBookings = await BookingModel.find({
+      eventId,
+      status: "pending",
+      isPaid: false,
+      expiryTime: { $gt: now },
+      seats: {
+        $elemMatch: {
+          $or: seats.map(({ section, row, seatNumber }) => ({
+            section,
+            row,
+            seatNumber,
+          })),
+        },
+      },
+    });
+
+    const unavailableSeats = [];
+    conflictingBookings.forEach((booking) => {
+      booking.seats.forEach((bookedSeat) => {
+        seats.forEach((requestedSeat) => {
+          if (
+            bookedSeat.section === requestedSeat.section &&
+            bookedSeat.row === requestedSeat.row &&
+            bookedSeat.seatNumber === requestedSeat.seatNumber
+          ) {
+            unavailableSeats.push(requestedSeat);
+          }
+        });
+      });
+    });
 
     if (unavailableSeats.length > 0) {
       return res.status(400).json({
@@ -49,10 +72,11 @@ const bookSeats = async (req, res) => {
       });
     }
 
-    // Total amount calculation from seat prices
+    // Total amount calculation
     const totalAmount = seats.reduce((sum, seat) => sum + seat.price, 0);
+    const expiryTime = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
-    // Booking create
+    // Create booking
     const newBooking = new BookingModel({
       eventId,
       buyerId,
@@ -60,13 +84,14 @@ const bookSeats = async (req, res) => {
       totalAmount,
       isPaid: false,
       sessionStartTime: new Date(),
+      expiryTime,
       status: "pending",
       isUserVisible: false,
     });
 
     await newBooking.save();
 
-    // Event data update
+    // Update Event with held seats
     event.seats.push(...seats);
     event.soldTickets.push(...seats);
     event.ticketSold += seats.length;
@@ -74,20 +99,22 @@ const bookSeats = async (req, res) => {
 
     await event.save();
 
-    // Auto cancel setup (after 10 minutes)
+    // Auto cancel unpaid booking after 10 mins
     setTimeout(async () => {
       const stillPending = await BookingModel.findById(newBooking._id);
 
-      if (stillPending && !stillPending.isPaid) {
+      if (
+        stillPending &&
+        !stillPending.isPaid &&
+        stillPending.status === "pending"
+      ) {
         console.log("Auto cancelling unpaid booking:", newBooking._id);
 
-        // Cancel the booking
         stillPending.status = "cancelled";
         stillPending.isTicketAvailable = false;
         stillPending.isUserVisible = false;
         await stillPending.save();
 
-        // Return the seats to the event
         const originalEvent = await EventModel.findById(eventId);
         if (originalEvent) {
           stillPending.seats.forEach((seat) => {
@@ -111,17 +138,16 @@ const bookSeats = async (req, res) => {
 
           originalEvent.ticketSold -= stillPending.seats.length;
           originalEvent.ticketsAvailable += stillPending.seats.length;
-
           await originalEvent.save();
         }
 
-        // Hide from Orders
+        // Hide from Orders (if exists)
         await OrderModel.findOneAndUpdate(
           { bookingId: stillPending._id },
           { isUserVisible: false }
         );
       }
-    }, 10 * 60 * 1000); // 10 minutes in ms
+    }, 10 * 60 * 1000); // 10 mins
 
     res.status(200).json({
       success: true,

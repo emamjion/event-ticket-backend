@@ -3,10 +3,6 @@ import Stripe from "stripe";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
-import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
-import generateTicketPDF from "../utils/generateTicketPDF.js";
-import sendEmail from "../utils/sendEmail.js";
-import sendTicketEmail from "../utils/sendTicketEmail.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -244,17 +240,17 @@ const confirmPayment = async (req, res) => {
     booking.isUserVisible = true;
     await booking.save();
 
-    // if recipient email exists, send ticket
-    if (booking.recipientEmail) {
-      const pdfBuffer = await generateTicketPDF(booking);
-      await sendTicketEmail({
-        to: booking.recipientEmail,
-        subject: "You've received an event ticket",
-        note: booking.note,
-        pdfBuffer,
-        filename: `ticket-${booking._id}.pdf`,
-      });
-    }
+    // // if recipient email exists, send ticket
+    // if (booking.recipientEmail) {
+    //   const pdfBuffer = await generateTicketPDF(booking);
+    //   await sendTicketEmail({
+    //     to: booking.recipientEmail,
+    //     subject: "You've received an event ticket",
+    //     note: booking.note,
+    //     pdfBuffer,
+    //     filename: `ticket-${booking._id}.pdf`,
+    //   });
+    // }
 
     // 3. Check if order already exists to prevent duplicate
     const existingOrder = await OrderModel.findOne({ bookingId: booking._id });
@@ -265,10 +261,10 @@ const confirmPayment = async (req, res) => {
     }
 
     // 5. Load event & buyer
-    const buyer = await UserModel.findById(booking.buyerId);
-    const seller = event?.sellerId
-      ? await SellerModel.findById(event.sellerId)
-      : null;
+    // const buyer = await UserModel.findById(booking.buyerId);
+    // const seller = event?.sellerId
+    //   ? await SellerModel.findById(event.sellerId)
+    //   : null;
     const event = await EventModel.findById(booking.eventId);
 
     const newOrder = new OrderModel({
@@ -286,27 +282,27 @@ const confirmPayment = async (req, res) => {
 
     await newOrder.save();
 
-    const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
+    // const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
 
-    await sendEmail(
-      buyer.email,
-      "Your Event Ticket & Invoice",
-      `Hi ${buyer.name},\n\nThank you for your purchase.\nFind your ticket invoice attached.`,
-      invoicePDF,
-      `invoice-${newOrder._id}.pdf`
-    );
+    // await sendEmail(
+    //   buyer.email,
+    //   "Your Event Ticket & Invoice",
+    //   `Hi ${buyer.name},\n\nThank you for your purchase.\nFind your ticket invoice attached.`,
+    //   invoicePDF,
+    //   `invoice-${newOrder._id}.pdf`
+    // );
 
-    if (seller?.email) {
-      await sendEmail(
-        seller.email,
-        `A Ticket Was Purchased for ${event.title}`,
-        `Hi ${
-          seller.name || "Organizer"
-        },\n\nA ticket has been purchased for your event.\nInvoice attached.`,
-        invoicePDF,
-        `invoice-${newOrder._id}.pdf`
-      );
-    }
+    // if (seller?.email) {
+    //   await sendEmail(
+    //     seller.email,
+    //     `A Ticket Was Purchased for ${event.title}`,
+    //     `Hi ${
+    //       seller.name || "Organizer"
+    //     },\n\nA ticket has been purchased for your event.\nInvoice attached.`,
+    //     invoicePDF,
+    //     `invoice-${newOrder._id}.pdf`
+    //   );
+    // }
 
     // mail functionality
     // const mailOpytions = {

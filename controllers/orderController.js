@@ -121,7 +121,9 @@ const getMyReservations = async (req, res) => {
       buyerId: new mongoose.Types.ObjectId(sellerId),
       isPaid: false,
       status: "reserved",
-    }).sort({ createdAt: -1 });
+    })
+      .sort({ createdAt: -1 })
+      .populate("eventId", "title");
 
     res.status(200).json({
       success: true,

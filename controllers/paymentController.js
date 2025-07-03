@@ -1,12 +1,12 @@
 import mongoose from "mongoose";
 import Stripe from "stripe";
-import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
-import generateTicketPDF from "../utils/generateTicketPDF.js";
-import sendTicketEmail from "../utils/sendTicketEmail.js";
 import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
+import generateTicketPDF from "../utils/generateTicketPDF.js";
+import sendEmail from "../utils/sendEmail.js";
+import sendTicketEmail from "../utils/sendTicketEmail.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -266,7 +266,9 @@ const confirmPayment = async (req, res) => {
 
     // 5. Load event & buyer
     const buyer = await UserModel.findById(booking.buyerId);
-    const seller = event?.sellerId ? await SellerModel.findById(event.sellerId) : null;
+    const seller = event?.sellerId
+      ? await SellerModel.findById(event.sellerId)
+      : null;
     const event = await EventModel.findById(booking.eventId);
 
     const newOrder = new OrderModel({
@@ -281,22 +283,42 @@ const confirmPayment = async (req, res) => {
       quantity: booking.seats.length,
       isUserVisible: true,
     });
-  
+
     await newOrder.save();
 
     const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
 
+    await sendEmail(
+      buyer.email,
+      "Your Event Ticket & Invoice",
+      `Hi ${buyer.name},\n\nThank you for your purchase.\nFind your ticket invoice attached.`,
+      invoicePDF,
+      `invoice-${newOrder._id}.pdf`
+    );
+
+    if (seller?.email) {
+      await sendEmail(
+        seller.email,
+        `A Ticket Was Purchased for ${event.title}`,
+        `Hi ${
+          seller.name || "Organizer"
+        },\n\nA ticket has been purchased for your event.\nInvoice attached.`,
+        invoicePDF,
+        `invoice-${newOrder._id}.pdf`
+      );
+    }
+
     // mail functionality
-    const mailOpytions = {
-      from: process.env.SENDER_EMAIL,
-      to: req.user.email,
-      subject: "Your Event Ticket Confirmation",
-      html: `
-        <h1>Dear, ${req.user.name}</h1>
-        <p>This is your ticket</p>
-      `,
-    };
-    await transporter.sendMail(mailOpytions);
+    // const mailOpytions = {
+    //   from: process.env.SENDER_EMAIL,
+    //   to: req.user.email,
+    //   subject: "Your Event Ticket Confirmation",
+    //   html: `
+    //     <h1>Dear, ${req.user.name}</h1>
+    //     <p>This is your ticket</p>
+    //   `,
+    // };
+    // await transporter.sendMail(mailOpytions);
 
     res.status(200).json({
       success: true,

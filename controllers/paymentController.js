@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import Stripe from "stripe";
-import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
 import generateTicketPDF from "../utils/generateTicketPDF.js";
+import { sendEmailWithAttachmentFile } from "../utils/mailer.js";
+import { generateInvoicePDFToFile } from "../utils/pdfGenerator.js";
 import sendTicketEmail from "../utils/sendTicketEmail.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -224,7 +225,6 @@ const confirmPayment = async (req, res) => {
         .json({ success: false, message: "paymentIntentId is required." });
     }
 
-    // 1. Find booking using paymentIntentId
     const booking = await BookingModel.findOne({ paymentIntentId });
     if (!booking) {
       return res
@@ -238,13 +238,11 @@ const confirmPayment = async (req, res) => {
         .json({ success: false, message: "Payment already confirmed." });
     }
 
-    // 2. Update booking as paid
     booking.isPaid = true;
     booking.status = "success";
     booking.isUserVisible = true;
     await booking.save();
 
-    // if recipient email exists, send ticket
     if (booking.recipientEmail) {
       const pdfBuffer = await generateTicketPDF(booking);
       await sendTicketEmail({
@@ -256,7 +254,6 @@ const confirmPayment = async (req, res) => {
       });
     }
 
-    // 3. Check if order already exists to prevent duplicate
     const existingOrder = await OrderModel.findOne({ bookingId: booking._id });
     if (existingOrder) {
       return res
@@ -265,6 +262,11 @@ const confirmPayment = async (req, res) => {
     }
 
     const event = await EventModel.findById(booking.eventId);
+    const { filePath, fileName } = await generateInvoicePDFToFile(
+      newOrder,
+      buyer,
+      event
+    );
 
     const newOrder = new OrderModel({
       bookingId: booking._id,
@@ -278,34 +280,41 @@ const confirmPayment = async (req, res) => {
       quantity: booking.seats.length,
       isUserVisible: true,
     });
-    // const orderData = {
-    //   bookingId: booking._id,
-    //   buyerId: booking.buyerId,
-    //   eventId: booking.eventId,
-    //   seats: booking.seats,
-    //   totalAmount: booking.totalAmount,
-    //   paymentStatus: "success",
-    //   paymentIntentId: booking.paymentIntentId,
-    //   sellerId: event?.sellerId || null,
-    //   quantity: booking.seats.length,
-    //   isUserVisible: true,
-    // };
 
-    // await OrderModel.create(orderData);
     await newOrder.save();
 
+    await sendEmailWithAttachmentFile({
+      to: buyer.email,
+      subject: "Your Event Invoice & Ticket",
+      text: `Hi ${buyer.name},\n\nThank you for your booking. Please find your invoice attached.`,
+      filePath,
+      filename: fileName,
+    });
+
+    if (seller?.email) {
+      await sendEmailWithAttachmentFile({
+        to: seller.email,
+        subject: `Ticket Sold for ${event.title}`,
+        text: `Hi ${
+          seller.name || "Organizer"
+        },\n\nA ticket has been purchased for your event. Invoice attached.`,
+        filePath,
+        filename: fileName,
+      });
+    }
+
     // mail functionality
-    const mailOpytions = {
-      from: process.env.SENDER_EMAIL,
-      to: req.user.email,
-      subject: "Your Event Ticket Confirmation",
-      html: `
-        <h1>Dear, ${req.user.name}</h1>
-        <p>This is your ticket</p>
-        Testing Ticket -  123456
-      `,
-    };
-    await transporter.sendMail(mailOpytions);
+    // const mailOpytions = {
+    //   from: process.env.SENDER_EMAIL,
+    //   to: req.user.email,
+    //   subject: "Your Event Ticket Confirmation",
+    //   html: `
+    //     <h1>Dear, ${req.user.name}</h1>
+    //     <p>This is your ticket</p>
+    //     Testing Ticket -  123456
+    //   `,
+    // };
+    // await transporter.sendMail(mailOpytions);
 
     res.status(200).json({
       success: true,

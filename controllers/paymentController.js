@@ -6,6 +6,7 @@ import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
 import generateTicketPDF from "../utils/generateTicketPDF.js";
 import sendTicketEmail from "../utils/sendTicketEmail.js";
+import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -224,7 +225,6 @@ const confirmPayment = async (req, res) => {
         .json({ success: false, message: "paymentIntentId is required." });
     }
 
-    // 1. Find booking using paymentIntentId
     const booking = await BookingModel.findOne({ paymentIntentId });
     if (!booking) {
       return res
@@ -264,6 +264,9 @@ const confirmPayment = async (req, res) => {
         .json({ success: false, message: "Order already exists." });
     }
 
+    // 5. Load event & buyer
+    const buyer = await UserModel.findById(booking.buyerId);
+    const seller = event?.sellerId ? await SellerModel.findById(event.sellerId) : null;
     const event = await EventModel.findById(booking.eventId);
 
     const newOrder = new OrderModel({
@@ -278,21 +281,10 @@ const confirmPayment = async (req, res) => {
       quantity: booking.seats.length,
       isUserVisible: true,
     });
-    // const orderData = {
-    //   bookingId: booking._id,
-    //   buyerId: booking.buyerId,
-    //   eventId: booking.eventId,
-    //   seats: booking.seats,
-    //   totalAmount: booking.totalAmount,
-    //   paymentStatus: "success",
-    //   paymentIntentId: booking.paymentIntentId,
-    //   sellerId: event?.sellerId || null,
-    //   quantity: booking.seats.length,
-    //   isUserVisible: true,
-    // };
-
-    // await OrderModel.create(orderData);
+  
     await newOrder.save();
+
+    const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
 
     // mail functionality
     const mailOpytions = {

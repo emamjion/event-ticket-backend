@@ -62,7 +62,6 @@ const orderSchema = new mongoose.Schema(
     ticketCode: {
       type: String,
       unique: true,
-      required: true,
     },
     isUsed: {
       type: Boolean,

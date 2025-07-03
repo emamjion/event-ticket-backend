@@ -4,6 +4,7 @@ import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
+import { generateTicketCode } from "../utils/generateTicketCode.js";
 import generateTicketPDF from "../utils/generateTicketPDF.js";
 import sendTicketEmail from "../utils/sendTicketEmail.js";
 
@@ -260,6 +261,14 @@ const confirmPayment = async (req, res) => {
         .json({ success: false, message: "Order already exists." });
     }
 
+    let ticketCode;
+    let exists = true;
+
+    while (exists) {
+      ticketCode = generateTicketCode();
+      exists = await OrderModel.findOne({ ticketCode });
+    }
+
     const event = await EventModel.findById(booking.eventId);
 
     const newOrder = new OrderModel({
@@ -273,6 +282,7 @@ const confirmPayment = async (req, res) => {
       sellerId: event?.sellerId || null,
       quantity: booking.seats.length,
       isUserVisible: true,
+      ticketCode: ticketCode,
     });
 
     await newOrder.save();

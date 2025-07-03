@@ -4,6 +4,6 @@ import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const ticketRouter = express.Router();
-ticketRouter.post("/verify/:orderId", verifyToken, verifyAdmin, verifyTicket);
+ticketRouter.post("/verify-ticket", verifyToken, verifyAdmin, verifyTicket);
 
 export default ticketRouter;

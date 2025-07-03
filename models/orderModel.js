@@ -39,11 +39,7 @@ const orderSchema = new mongoose.Schema(
       enum: ["success", "cancelled", "reserved", "refunded"],
       default: "success",
     },
-    ticketStatus: {
-      type: String,
-      enum: ["unused", "used"],
-      default: "unused",
-    },
+
     // paymentIntentId: String,
     paymentIntentId: { type: String, required: true },
     orderTime: {
@@ -62,6 +58,18 @@ const orderSchema = new mongoose.Schema(
     quantity: {
       type: Number,
       required: true,
+    },
+    ticketCode: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+    isUsed: {
+      type: Boolean,
+      default: false,
+    },
+    scannedAt: {
+      type: Date,
     },
   },
   {

@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import Stripe from "stripe";
-import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
+import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 import generateTicketPDF from "../utils/generateTicketPDF.js";
+import sendEmail from "../utils/sendEmail.js";
 import sendTicketEmail from "../utils/sendTicketEmail.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -294,7 +295,9 @@ const confirmPayment = async (req, res) => {
     // await OrderModel.create(orderData);
     await newOrder.save();
 
-    // mail functionality
+    const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
+
+    /* mail functionality
     const mailOpytions = {
       from: process.env.SENDER_EMAIL,
       to: req.user.email,
@@ -305,6 +308,14 @@ const confirmPayment = async (req, res) => {
       `,
     };
     await transporter.sendMail(mailOpytions);
+    */
+    await sendEmail(
+      buyer.email,
+      "Your Event Ticket & Invoice",
+      `Hi ${buyer.name},\n\nThank you for your purchase. Find your invoice attached.`,
+      invoicePDF,
+      `invoice-${newOrder._id}.pdf`
+    );
 
     res.status(200).json({
       success: true,

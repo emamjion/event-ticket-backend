@@ -44,6 +44,11 @@ const orderSchema = new mongoose.Schema(
       enum: ["unused", "used"],
       default: "unused",
     },
+    ticketCode: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     // paymentIntentId: String,
     paymentIntentId: { type: String, required: true },
     orderTime: {

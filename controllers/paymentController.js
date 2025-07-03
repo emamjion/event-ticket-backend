@@ -6,7 +6,6 @@ import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
 import generateTicketPDF from "../utils/generateTicketPDF.js";
 import sendTicketEmail from "../utils/sendTicketEmail.js";
-import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -295,8 +294,6 @@ const confirmPayment = async (req, res) => {
     // await OrderModel.create(orderData);
     await newOrder.save();
 
-    const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
-
     // mail functionality
     const mailOpytions = {
       from: process.env.SENDER_EMAIL,
@@ -305,8 +302,8 @@ const confirmPayment = async (req, res) => {
       html: `
         <h1>Dear, ${req.user.name}</h1>
         <p>This is your ticket</p>
+        Testing Ticket -  123456
       `,
-      invoicePDF
     };
     await transporter.sendMail(mailOpytions);
 

@@ -276,6 +276,8 @@ const confirmPayment = async (req, res) => {
 
     await newOrder.save();
 
+    console.log("Order saved successfully:", newOrder._id);
+
     // mail functionality
     const mailOpytions = {
       from: process.env.SENDER_EMAIL,

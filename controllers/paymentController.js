@@ -274,7 +274,6 @@ const confirmPayment = async (req, res) => {
       sellerId: event?.sellerId || null,
       quantity: booking.seats.length,
       isUserVisible: true,
-      ticketCode: await generateUniqueTicketCode(),
     });
 
     await newOrder.save();

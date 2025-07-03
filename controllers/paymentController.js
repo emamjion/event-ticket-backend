@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Stripe from "stripe";
+import transporter from "../config/nodeMailer.js";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
@@ -288,6 +289,8 @@ const confirmPayment = async (req, res) => {
       `,
     };
     await transporter.sendMail(mailOpytions);
+
+    console.log("OrderId: ", newOrder._id);
 
     res.status(200).json({
       success: true,

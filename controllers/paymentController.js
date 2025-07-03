@@ -3,8 +3,10 @@ import Stripe from "stripe";
 import BookingModel from "../models/booking.model.js";
 import EventModel from "../models/eventModel.js";
 import OrderModel from "../models/orderModel.js";
-import sendEmail from "../utils/sendEmail.js";
 import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
+import sendEmail from "../utils/sendEmail.js";
+import sendTicketEmail from "../utils/sendTicketEmail.js";
+import generateTicketPDF from "../utils/generateTicketPDF.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -89,34 +91,37 @@ const confirmPayment = async (req, res) => {
     const { paymentIntentId } = req.body;
 
     if (!paymentIntentId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "paymentIntentId is required." });
+      return res.status(400).json({
+        success: false,
+        message: "paymentIntentId is required.",
+      });
     }
 
     // 1. Find booking
     const booking = await BookingModel.findOne({ paymentIntentId });
     if (!booking) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
     }
 
     if (booking.isPaid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Payment already confirmed." });
+      return res.status(400).json({
+        success: false,
+        message: "Payment already confirmed.",
+      });
     }
 
-    // 2. Update booking
+    // 2. Update booking status
     booking.isPaid = true;
     booking.status = "success";
     booking.isUserVisible = true;
     await booking.save();
 
-    // 3. Send ticket (if recipient email exists)
+    // 3. Send ticket if recipient email is set
     if (booking.recipientEmail) {
-      const pdfBuffer = await generateTicketPDF(booking); // assumed existing
+      const pdfBuffer = await generateTicketPDF(booking);
       await sendTicketEmail({
         to: booking.recipientEmail,
         subject: "You've received an event ticket",
@@ -126,22 +131,37 @@ const confirmPayment = async (req, res) => {
       });
     }
 
-    // 4. Prevent duplicate order
+    // 4. Check for existing order
     const existingOrder = await OrderModel.findOne({ bookingId: booking._id });
     if (existingOrder) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Order already exists." });
+      return res.status(400).json({
+        success: false,
+        message: "Order already exists.",
+      });
     }
 
-    // 5. Load event & buyer
+    // 5. Load event, buyer, seller
     const event = await EventModel.findById(booking.eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found.",
+      });
+    }
+
     const buyer = await UserModel.findById(booking.buyerId);
+    if (!buyer) {
+      return res.status(404).json({
+        success: false,
+        message: "Buyer not found.",
+      });
+    }
+
     const seller = event?.sellerId
       ? await SellerModel.findById(event.sellerId)
       : null;
 
-    // 6. Create order
+    // 6. Create and save order
     const newOrder = new OrderModel({
       bookingId: booking._id,
       buyerId: booking.buyerId,
@@ -150,47 +170,60 @@ const confirmPayment = async (req, res) => {
       totalAmount: booking.totalAmount,
       paymentStatus: "success",
       paymentIntentId: booking.paymentIntentId,
-      sellerId: event?.sellerId || null,
+      sellerId: event.sellerId || null,
       quantity: booking.seats.length,
       isUserVisible: true,
     });
 
-    await newOrder.save();
+    await newOrder.save().then(() => {
+      console.log("✅ Order saved:", newOrder._id);
+    }).catch((err) => {
+      console.error("❌ Order save failed:", err.message);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to save order.",
+        error: err.message,
+      });
+    });
 
     // 7. Generate invoice PDF
     const invoicePDF = await generateInvoicePDF(newOrder, buyer, event);
 
-    // 8. Send email to buyer
+    // 8. Send invoice to buyer
     await sendEmail(
       buyer.email,
       "Your Event Ticket & Invoice",
-      `Hi ${buyer.name},\n\nThank you for your purchase.\nFind your ticket invoice attached.`,
+      `Hi ${buyer.name},\n\nThank you for your purchase. Find your invoice attached.`,
       invoicePDF,
       `invoice-${newOrder._id}.pdf`
     );
 
-    // 9. Send email to seller
+    // 9. Send invoice to seller
     if (seller?.email) {
       await sendEmail(
         seller.email,
         `A Ticket Was Purchased for ${event.title}`,
-        `Hi ${
-          seller.name || "Organizer"
-        },\n\nA ticket has been purchased for your event.\nInvoice attached.`,
+        `Hi ${seller.name || "Organizer"},\n\nA ticket has been purchased for your event. Invoice attached.`,
         invoicePDF,
         `invoice-${newOrder._id}.pdf`
       );
     }
 
-    res.status(200).json({
+    // 10. Return response
+    return res.status(200).json({
       success: true,
       message: "Payment confirmed and order created.",
       orderId: newOrder._id,
       order: newOrder,
     });
+
   } catch (error) {
     console.error("Confirm Payment Error:", error);
-    res.status(500).json({ success: false, message: "Something went wrong." });
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong.",
+      error: error.message,
+    });
   }
 };
 

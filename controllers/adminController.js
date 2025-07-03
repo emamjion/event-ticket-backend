@@ -589,10 +589,9 @@ const getAllTransactions = async (req, res) => {
 const getAllBookings = async (req, res) => {
   try {
     const orders = await OrderModel.find()
+      .sort({ createdAt: -1 })
       .populate("buyerId", "name email")
       .populate("eventId", "title date");
-
-    console.log("order Id: ", orders._id);
 
     res.status(200).json({
       success: true,

@@ -262,11 +262,10 @@ const confirmPayment = async (req, res) => {
     }
 
     const event = await EventModel.findById(booking.eventId);
-    const { filePath, fileName } = await generateInvoicePDFToFile(
-      newOrder,
-      buyer,
-      event
-    );
+    const buyer = await UserModel.findById(booking.buyerId);
+    const seller = event?.sellerId
+      ? await SellerModel.findById(event.sellerId)
+      : null;
 
     const newOrder = new OrderModel({
       bookingId: booking._id,
@@ -282,6 +281,12 @@ const confirmPayment = async (req, res) => {
     });
 
     await newOrder.save();
+
+    const { filePath, fileName } = await generateInvoicePDFToFile(
+      newOrder,
+      buyer,
+      event
+    );
 
     await sendEmailWithAttachmentFile({
       to: buyer.email,

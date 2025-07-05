@@ -18,6 +18,7 @@ import ticketRouter from "./routes/ticket.route.js";
 import userRouter from "./routes/userRoute.js";
 import withdrawalRouter from "./routes/withdrawal.route.js";
 // import jwtRouter from "./routes/jwtRoute.js";
+import bannerRouter from "./routes/banner.route.js";
 import "./utils/cron/bookingCleanup.js";
 
 const app = express();
@@ -53,6 +54,7 @@ app.use("/api/v1/withdraw", withdrawalRouter);
 app.use("/api/v1/coupons", couponRouter);
 app.use("/api/v1/blogs", blogRouter);
 app.use("/api/v1/tickets", ticketRouter);
+app.use("/api/v1/banner", bannerRouter);
 
 // JWT route (optional)
 // app.use("/api", jwtRouter);

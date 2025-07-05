@@ -6,6 +6,7 @@ const getAllBanners = async (req, res) => {
     res.json({
       success: true,
       message: "Banners fetched successfully!",
+      banners: banners,
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch banners" });

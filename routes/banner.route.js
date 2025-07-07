@@ -10,7 +10,7 @@ import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const bannerRouter = express.Router();
-bannerRouter.get("/banners", verifyToken, verifyAdmin, getAllBanners);
+bannerRouter.get("/banners", getAllBanners);
 bannerRouter.post(
   "/upload",
   upload.array("images"),

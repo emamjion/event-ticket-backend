@@ -20,6 +20,20 @@ const uploadBanners = async (req, res) => {
     const sizes = req.body.sizes || [];
     const files = req.files;
 
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No banner images provided",
+      });
+    }
+
+    if (files.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "You can upload a maximum of 5 banner images",
+      });
+    }
+
     const uploadedBanners = [];
 
     for (let i = 0; i < files.length; i++) {

@@ -13,7 +13,7 @@ const bannerRouter = express.Router();
 bannerRouter.get("/banners", verifyToken, verifyAdmin, getAllBanners);
 bannerRouter.post(
   "/upload",
-  upload.array("images", 4),
+  upload.array("images"),
   verifyToken,
   verifyAdmin,
   uploadBanners

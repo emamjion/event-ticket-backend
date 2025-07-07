@@ -1,5 +1,4 @@
 import { v2 as cloudinary } from "cloudinary";
-import fs from "fs";
 import BannerModel from "../models/banner.model.js";
 
 const getAllBanners = async (req, res) => {
@@ -17,8 +16,12 @@ const getAllBanners = async (req, res) => {
 
 const uploadBanners = async (req, res) => {
   try {
-    const sizes = req.body.sizes || [];
+    let sizes = req.body.sizes || [];
     const files = req.files;
+
+    if (typeof sizes === "string") {
+      sizes = [sizes];
+    }
 
     if (!files || files.length === 0) {
       return res.status(400).json({
@@ -40,13 +43,15 @@ const uploadBanners = async (req, res) => {
       const file = files[i];
       const size = Array.isArray(sizes) ? sizes[i] || "" : sizes;
 
-      // Upload to Cloudinary
-      const result = await cloudinary.uploader.upload(file.path, {
+      // Convert buffer to base64
+      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
+        "base64"
+      )}`;
+
+      // Upload to Cloudinary using buffer
+      const result = await cloudinary.uploader.upload(base64Image, {
         folder: "event-banners",
       });
-
-      // Delete local file
-      fs.unlinkSync(file.path);
 
       uploadedBanners.push({
         imageUrl: result.secure_url,
@@ -78,13 +83,16 @@ const updateBanner = async (req, res) => {
     let updateData = {};
 
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
+      const file = req.file;
+      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
+        "base64"
+      )}`;
+
+      const result = await cloudinary.uploader.upload(base64Image, {
         folder: "event-banners",
       });
 
       updateData.imageUrl = result.secure_url;
-
-      fs.unlinkSync(req.file.path);
     }
 
     if (size) {
@@ -94,6 +102,13 @@ const updateBanner = async (req, res) => {
     const updatedBanner = await BannerModel.findByIdAndUpdate(id, updateData, {
       new: true,
     });
+
+    if (!updatedBanner) {
+      return res.status(404).json({
+        success: false,
+        message: "Banner not found",
+      });
+    }
 
     res.status(200).json({
       success: true,

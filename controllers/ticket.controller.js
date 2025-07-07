@@ -1,5 +1,6 @@
 import transporter from "../config/nodeMailer.js";
 import OrderModel from "../models/orderModel.js";
+import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 import generateOrderTicketPDF from "../utils/generateOrderTicketPDF.js";
 
 // const verifyTicket = async (req, res) => {
@@ -100,8 +101,9 @@ const sendOrderEmail = async (req, res) => {
         .json({ success: false, message: "orderId is required." });
     }
 
+    // Fetch order and populate event, buyer, and seller details
     const order = await OrderModel.findById(orderId).populate(
-      "eventId buyerId"
+      "eventId buyerId sellerId"
     );
     if (!order) {
       return res
@@ -109,9 +111,16 @@ const sendOrderEmail = async (req, res) => {
         .json({ success: false, message: "Order not found." });
     }
 
+    // Extract buyer and event details
     const buyerName = order?.buyerId?.name || "Customer";
     const buyerEmail = order?.buyerId?.email;
     const event = order?.eventId;
+
+    const customer = {
+      name: order?.buyerId?.name || "Customer",
+      email: order?.buyerId?.email || "unknown@example.com",
+      phone: order?.buyerId?.phone || "N/A", // If phone is optional
+    };
 
     if (!buyerEmail || !event) {
       return res
@@ -119,12 +128,17 @@ const sendOrderEmail = async (req, res) => {
         .json({ success: false, message: "Missing email or event data." });
     }
 
-    const pdfBuffer = await generateOrderTicketPDF(order, event);
+    // 🧾 Generate both PDFs for buyer and seller
+    const ticketPdfBuffer = await generateOrderTicketPDF(order, event);
+    const invoicePdfBuffer = await generateInvoicePDF(order, event, customer); // <- your utility
 
-    const mailOptions = {
+    // ==========================
+    // Send Email to Buyer
+    // ==========================
+    const mailOptionsForBuyer = {
       from: process.env.SENDER_EMAIL,
       to: buyerEmail,
-      subject: `Your Ticket for ${event.title}`,
+      subject: `Your Ticket & Invoice for ${event.title}`,
       html: `
         <div style="font-family:sans-serif;">
           <h2>Hello ${buyerName},</h2>
@@ -133,7 +147,7 @@ const sendOrderEmail = async (req, res) => {
           <p><strong>Seats:</strong> ${order.seats.join(", ")}</p>
           <p><strong>Ticket Code:</strong> ${order.ticketCode}</p>
           <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
-          <p>Please find your ticket PDF attached below.</p>
+          <p>Please find both your <strong>ticket</strong> and <strong>invoice</strong> PDFs attached below.</p>
           <br/>
           <p>Enjoy the event! 🎉</p>
         </div>
@@ -141,16 +155,63 @@ const sendOrderEmail = async (req, res) => {
       attachments: [
         {
           filename: `ticket-${order._id}.pdf`,
-          content: pdfBuffer,
+          content: ticketPdfBuffer,
+        },
+        {
+          filename: `invoice-${order._id}.pdf`,
+          content: invoicePdfBuffer,
         },
       ],
     };
 
-    await transporter.sendMail(mailOptions);
+    // Send email to the buyer
+    await transporter.sendMail(mailOptionsForBuyer);
 
+    // ==========================
+    // Send Email to Seller (Organizer)
+    // ==========================
+    const sellerName = order?.sellerId?.name || "Organizer";
+    const sellerEmail = order?.sellerId?.email;
+    const sellerPhone = order?.sellerId?.phone || "N/A";
+    console.log("Seller email: ", sellerEmail);
+
+    // Check if seller's email exists
+    if (sellerEmail) {
+      const sellerMailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: sellerEmail,
+        subject: `Invoice for ${event.title} booking by ${buyerName}`,
+        html: `
+          <div style="font-family:sans-serif;">
+            <h2>Hello ${sellerName},</h2>
+            <p>A new booking has been made for your event <strong>${
+              event.title
+            }</strong>.</p>
+            <p><strong>Buyer:</strong> ${buyerName} (${buyerEmail})</p>
+            <p><strong>Seats:</strong> ${order.seats.join(", ")}</p>
+            <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
+            <p>Please find the invoice PDF attached below for your records.</p>
+            <br/>
+            <p>Best Regards,</p>
+            <p>Event Management Platform</p>
+          </div>
+        `,
+        attachments: [
+          {
+            filename: `invoice-${order._id}.pdf`,
+            content: invoicePdfBuffer,
+          },
+        ],
+      };
+
+      // Send email to the seller (organizer)
+      await transporter.sendMail(sellerMailOptions);
+    }
+
+    // Respond with success
     res.status(200).json({
       success: true,
-      message: "Email sent successfully.",
+      message: "Email sent successfully with ticket and invoice.",
     });
   } catch (error) {
     console.error("Send Order Email Error:", error);

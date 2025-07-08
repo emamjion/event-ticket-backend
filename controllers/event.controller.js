@@ -10,7 +10,7 @@ const getSellerId = async (user) => {
     if (!seller) throw new Error("Seller not found");
     return seller._id;
   } else if (user.role === "admin") {
-    return user.id; 
+    return user.id;
   } else {
     throw new Error("Unauthorized");
   }
@@ -46,7 +46,12 @@ const createEvent = async (req, res) => {
       });
     }
 
-    const result = await cloudinary.uploader.upload(image.path);
+    const base64Image = `data:${image.mimetype};base64,${image.buffer.toString(
+      "base64"
+    )}`;
+    const result = await cloudinary.uploader.upload(base64Image, {
+      folder: "event-images",
+    });
     const imageUrl = result.secure_url;
 
     const existingEvent = await EventModel.findOne({

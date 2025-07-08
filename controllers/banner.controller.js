@@ -7,6 +7,7 @@ const getAllBanners = async (req, res) => {
     res.json({
       success: true,
       message: "Banner images fetched successfully!",
+      totalImages: banners.length,
       banners: banners,
     });
   } catch (error) {
@@ -64,6 +65,7 @@ const uploadBanners = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Banner images uploaded successfully",
+      totalImages: saved.length,
       banners: saved,
     });
   } catch (error) {

@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import { v2 as cloudinary } from "cloudinary";
 import crypto from "crypto";
-import fs from "fs";
 import UserModel from "../models/userModel.js";
 
 // function to get user profile
@@ -98,9 +97,16 @@ const updateProfile = async (req, res) => {
     }
 
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
+      const file = req.file;
+      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
+        "base64"
+      )}`;
+
+      const result = await cloudinary.uploader.upload(base64Image, {
+        folder: "profile-images",
+      });
+
       updateData.profileImg = result.secure_url;
-      fs.unlinkSync(req.file.path); // ✅ Delete local image after upload
     }
 
     const updatedUser = await UserModel.findByIdAndUpdate(userId, updateData, {

@@ -142,6 +142,8 @@ const createPayment = async (req, res) => {
       },
     });
 
+    console.log("payment intent:: ", paymentIntent);
+
     // 5. Save paymentIntentId to booking
     booking.paymentIntentId = paymentIntent.id;
     await booking.save();

@@ -134,7 +134,7 @@ const createPayment = async (req, res) => {
     // 4. Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(booking.totalAmount * 100),
-      currency: "usd",
+      currency: "aud",
       metadata: {
         bookingId: booking._id.toString(),
         buyerId: booking.buyerId.toString(),
@@ -152,6 +152,7 @@ const createPayment = async (req, res) => {
       bookingId: booking._id,
       clientSecret: paymentIntent.client_secret,
       amount: booking.totalAmount,
+      currency: "aud",
       paymentIntentId: booking.paymentIntentId,
     });
   } catch (error) {

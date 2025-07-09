@@ -721,9 +721,9 @@ const refundAndCancel = async (req, res) => {
     );
 
     if (seatIndex === -1) {
-      return res
-        .status(404)
-        .json({ message: "Seat not found or already removed." });
+      return res.status(404).json({
+        message: "Seat not found or already removed.",
+      });
     }
 
     // Refund that seat's amount
@@ -733,8 +733,20 @@ const refundAndCancel = async (req, res) => {
         .json({ message: "No payment intent found for refund." });
     }
 
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.retrieve(
+        order.paymentIntentId
+      );
+    } catch (err) {
+      return res.status(400).json({
+        message: "Invalid or expired payment intent.",
+        error: err.message,
+      });
+    }
+
     const refund = await stripe.refunds.create({
-      payment_intent: order.paymentIntentId,
+      payment_intent: paymentIntent.id,
       amount: Math.floor(price * 100), // Stripe uses cents
     });
 
@@ -742,7 +754,13 @@ const refundAndCancel = async (req, res) => {
     order.seats.splice(seatIndex, 1);
     order.totalAmount = Math.max(0, order.totalAmount - price);
     order.quantity = order.seats.length;
-    await order.save();
+
+    // ✅ If no seats left, delete order
+    if (order.seats.length === 0) {
+      await OrderModel.findByIdAndDelete(order._id);
+    } else {
+      await order.save();
+    }
 
     // Remove seat from event.seats & event.soldTickets
     const event = await EventModel.findById(order.eventId);
@@ -763,15 +781,19 @@ const refundAndCancel = async (req, res) => {
             s.seatNumber === seatNumber
           )
       );
-      event.ticketSold -= 1;
+      event.ticketSold = Math.max(0, event.ticketSold - 1);
       event.ticketsAvailable += 1;
       await event.save();
     }
 
     return res.status(200).json({
-      message: "Seat cancelled and refund successful.",
+      message:
+        order.seats.length === 0
+          ? "Seat cancelled, refund successful, and order deleted."
+          : "Seat cancelled and refund successful.",
       refund,
-      updatedOrder: order,
+      updatedOrder: order.seats.length > 0 ? order : null,
+      deletedOrderId: order.seats.length === 0 ? order._id : null,
     });
   } catch (error) {
     console.error("Cancel Seat Error:", error);

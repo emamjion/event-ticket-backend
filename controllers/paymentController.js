@@ -140,6 +140,8 @@ const createPayment = async (req, res) => {
         buyerId: booking.buyerId.toString(),
         eventId: booking.eventId.toString(),
       },
+      description: `Payment for event: ${event.title}`,
+      receipt_email: req.user?.email || undefined,
     });
 
     console.log("payment intent:: ", paymentIntent);
@@ -156,6 +158,8 @@ const createPayment = async (req, res) => {
       amount: booking.totalAmount,
       currency: "aud",
       paymentIntentId: booking.paymentIntentId,
+      email: req.user?.email,
+      name: req.user?.name,
     });
   } catch (error) {
     console.error("Create Payment error:", error);

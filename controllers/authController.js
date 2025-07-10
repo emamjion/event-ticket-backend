@@ -431,7 +431,9 @@ const resetPassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    res.status(200).json({ message: "Password reset successful." });
+    res
+      .status(200)
+      .json({ success: true, message: "Password reset successful." });
   } catch (error) {
     console.error("Reset Password Error:", error);
     res
@@ -446,5 +448,6 @@ export {
   isAuthenticated,
   loginUser,
   logoutUser,
+  resetPassword,
   verifyOtp,
 };

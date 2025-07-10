@@ -364,4 +364,58 @@ const isAuthenticated = async (req, res) => {
   }
 };
 
+// forget password functionality
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required." });
+  }
+
+  try {
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found with this email." });
+    }
+
+    // .0Create JWT Reset Token (valid for 15 mins)
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET_TOKEN,
+      { expiresIn: "15m" }
+    );
+
+    // Password reset link
+    const resetLink = `https://www.eventsntickets.com.au/reset-password?token=${token}`;
+
+    // ✉️ Send email using nodemailer
+    const transporter = nodemailer.createTransport({
+      service: "gmail", // Or use custom SMTP
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"Ticket Support" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "Reset your password",
+      html: `
+        <p>Hello ${user.name || "User"},</p>
+        <p>Click the link below to reset your password (valid for 15 minutes):</p>
+        <a href="${resetLink}" target="_blank">${resetLink}</a>
+        <p>If you didn't request this, just ignore this email.</p>
+      `,
+    });
+
+    res.status(200).json({ message: "Reset link sent to email." });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export { createUser, isAuthenticated, loginUser, logoutUser, verifyOtp };

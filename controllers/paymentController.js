@@ -120,18 +120,15 @@ const createPayment = async (req, res) => {
         ? booking.finalAmount
         : booking.totalAmount;
 
-    console.log("💰 Payment amount calculation:", {
-      bookingId: booking._id,
-      originalAmount: booking.totalAmount,
-      finalAmount: booking.finalAmount,
-      discountAmount: booking.discountAmount,
-      couponCode: booking.couponCode,
-      amountToPay: amountToPay,
+    const stripeCustomer = await stripe.customers.create({
+      name: req.user?.name || "Guest",
+      email: req.user?.email || "noemail@example.com",
     });
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amountToPay * 100), // Stripe needs cents
+      amount: Math.round(amountToPay * 100),
       currency: "aud",
+      customer: stripeCustomer.id,
       metadata: {
         bookingId: booking._id.toString(),
         buyerId: booking.buyerId.toString(),

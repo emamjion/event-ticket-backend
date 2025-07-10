@@ -420,12 +420,14 @@ const getSellerCoupons = async (req, res) => {
       sellerId,
       isDeleted: false,
     }).populate("eventId", "name");
-    res.status(200).json({
-      success: true,
-      total: coupons.length,
-      message: "Coupons fetched successfully",
-      coupons,
-    });
+    res
+      .status(200)
+      .json({
+        success: true,
+        total: coupons.length,
+        message: "Coupons fetched successfully",
+        coupons,
+      });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -468,63 +470,39 @@ const applyCoupon = async (req, res) => {
   try {
     const { code, eventId, totalAmount } = req.body;
 
-    if (!code || !eventId || typeof totalAmount !== "number") {
-      return res.status(400).json({
-        success: false,
-        message: "Coupon code, event ID, and total amount are required.",
-      });
-    }
-
-    // Check if coupon exists & valid
     const coupon = await CouponModel.findOne({
       code: code.toUpperCase(),
       eventId,
-      isActive: true,
-      isDeleted: false,
       status: "approved",
+      startDate: { $lte: new Date() },
+      endDate: { $gte: new Date() },
     });
 
     if (!coupon) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid or expired coupon code.",
-      });
-    }
-
-    const now = new Date();
-    if (now < coupon.startDate || now > coupon.endDate) {
       return res.status(400).json({
         success: false,
-        message: "Coupon is not currently active.",
+        message: "Invalid or expired coupon",
       });
     }
 
-    if (totalAmount < coupon.minPurchaseAmount) {
-      return res.status(400).json({
-        success: false,
-        message: `Minimum purchase amount must be at least $${coupon.minPurchaseAmount}.`,
-      });
+    if (!coupon.isActive) {
+      return res
+        .status(400)
+        .json({ success: false, message: "This coupon is currently inactive" });
     }
 
-    // Calculate discount
-    const discountAmount = (totalAmount * coupon.discountPercentage) / 100;
-    const finalAmount = totalAmount - discountAmount;
+    const discountAmount = (coupon.discountPercentage / 100) * totalAmount;
+    const finalPrice = totalAmount - discountAmount;
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Coupon applied successfully.",
+      message: "Coupon applied successfully",
       discountAmount,
-      finalAmount,
-      couponCode: coupon.code,
-      discountPercentage: coupon.discountPercentage,
+      finalPrice,
+      couponId: coupon._id,
     });
-  } catch (error) {
-    console.error("Coupon Apply Error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to apply coupon.",
-      error: error.message,
-    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 

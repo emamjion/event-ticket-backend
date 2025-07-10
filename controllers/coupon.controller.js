@@ -420,14 +420,12 @@ const getSellerCoupons = async (req, res) => {
       sellerId,
       isDeleted: false,
     }).populate("eventId", "name");
-    res
-      .status(200)
-      .json({
-        success: true,
-        total: coupons.length,
-        message: "Coupons fetched successfully",
-        coupons,
-      });
+    res.status(200).json({
+      success: true,
+      total: coupons.length,
+      message: "Coupons fetched successfully",
+      coupons,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -466,9 +464,55 @@ const approveCoupon = async (req, res) => {
 };
 
 // function to apply coupon
+// const applyCoupon = async (req, res) => {
+//   try {
+//     const { code, eventId, totalAmount } = req.body;
+
+//     const coupon = await CouponModel.findOne({
+//       code: code.toUpperCase(),
+//       eventId,
+//       status: "approved",
+//       startDate: { $lte: new Date() },
+//       endDate: { $gte: new Date() },
+//     });
+
+//     if (!coupon) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid or expired coupon",
+//       });
+//     }
+
+//     if (!coupon.isActive) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "This coupon is currently inactive" });
+//     }
+
+//     const discountAmount = (coupon.discountPercentage / 100) * totalAmount;
+//     const finalPrice = totalAmount - discountAmount;
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Coupon applied successfully",
+//       discountAmount,
+//       finalPrice,
+//       couponId: coupon._id,
+//     });
+//   } catch (err) {
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
 const applyCoupon = async (req, res) => {
   try {
-    const { code, eventId, totalAmount } = req.body;
+    const { code, eventId, totalAmount, bookingId } = req.body;
+
+    console.log("Applying coupon:", {
+      code,
+      eventId,
+      totalAmount,
+      bookingId,
+    });
 
     const coupon = await CouponModel.findOne({
       code: code.toUpperCase(),
@@ -486,13 +530,43 @@ const applyCoupon = async (req, res) => {
     }
 
     if (!coupon.isActive) {
-      return res
-        .status(400)
-        .json({ success: false, message: "This coupon is currently inactive" });
+      return res.status(400).json({
+        success: false,
+        message: "This coupon is currently inactive",
+      });
     }
 
     const discountAmount = (coupon.discountPercentage / 100) * totalAmount;
-    const finalPrice = totalAmount - discountAmount;
+    const finalPrice = Math.max(0, totalAmount - discountAmount);
+
+    console.log("💰 Coupon calculation:", {
+      originalAmount: totalAmount,
+      discountPercentage: coupon.discountPercentage,
+      discountAmount,
+      finalPrice,
+    });
+
+    if (bookingId) {
+      const booking = await BookingModel.findById(bookingId);
+      if (booking) {
+        booking.couponCode = code.toUpperCase();
+        booking.couponId = coupon._id;
+        booking.discountAmount = discountAmount;
+        booking.finalAmount = finalPrice;
+        booking.originalAmount = totalAmount;
+        await booking.save();
+
+        console.log("Booking updated with coupon details:", {
+          bookingId,
+          couponCode: booking.couponCode,
+          originalAmount: booking.originalAmount,
+          discountAmount: booking.discountAmount,
+          finalAmount: booking.finalAmount,
+        });
+      } else {
+        console.warn("Booking not found for ID:", bookingId);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -502,6 +576,7 @@ const applyCoupon = async (req, res) => {
       couponId: coupon._id,
     });
   } catch (err) {
+    console.error("❌ Apply coupon error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

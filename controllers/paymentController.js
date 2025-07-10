@@ -21,6 +21,73 @@ const getSellerId = async (user) => {
   }
 };
 
+// const createPayment = async (req, res) => {
+//   const { bookingId } = req.body;
+
+//   if (!bookingId) {
+//     return res.status(400).json({ message: "bookingId is required." });
+//   }
+
+//   try {
+//     const booking = await BookingModel.findById(bookingId);
+//     if (!booking) {
+//       return res.status(404).json({ message: "Booking not found." });
+//     }
+
+//     const existingOrder = await OrderModel.findOne({ bookingId });
+//     if (existingOrder) {
+//       return res.status(400).json({
+//         message: "Payment already initiated for this booking.",
+//         orderId: existingOrder._id,
+//         paymentIntentId: existingOrder.paymentIntentId,
+//       });
+//     }
+
+//     const event = await EventModel.findById(booking.eventId);
+//     if (!event) {
+//       return res.status(404).json({ message: "Event not found." });
+//     }
+
+//     const amountToPay = booking.finalAmount || booking.totalAmount;
+
+//     const paymentIntent = await stripe.paymentIntents.create({
+//       amount: Math.round(amountToPay * 100), // Stripe needs cents
+//       currency: "aud",
+//       metadata: {
+//         bookingId: booking._id.toString(),
+//         buyerId: booking.buyerId.toString(),
+//         eventId: booking.eventId.toString(),
+//         couponCode: booking?.couponCode || "none",
+//       },
+//       description: `Payment for event: ${event.title}`,
+//       receipt_email: req.user?.email || undefined,
+//     });
+
+//     booking.paymentIntentId = paymentIntent.id;
+//     await booking.save();
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Payment intent created. Proceed to payment.",
+//       bookingId: booking._id,
+//       clientSecret: paymentIntent.client_secret,
+//       amount: amountToPay,
+//       currency: "aud",
+//       paymentIntentId: paymentIntent.id,
+//       email: req.user?.email,
+//       name: req.user?.name,
+//       couponCode: booking?.couponCode || null,
+//       discountAmount: booking?.discountAmount || 0,
+//     });
+//   } catch (error) {
+//     console.error("Create Payment error:", error);
+//     return res.status(500).json({
+//       message: "Internal Server Error",
+//       error: error.message || error,
+//     });
+//   }
+// };
+
 const createPayment = async (req, res) => {
   const { bookingId } = req.body;
 
@@ -48,7 +115,19 @@ const createPayment = async (req, res) => {
       return res.status(404).json({ message: "Event not found." });
     }
 
-    const amountToPay = booking.finalAmount || booking.totalAmount;
+    const amountToPay =
+      booking.finalAmount !== undefined
+        ? booking.finalAmount
+        : booking.totalAmount;
+
+    console.log("💰 Payment amount calculation:", {
+      bookingId: booking._id,
+      originalAmount: booking.totalAmount,
+      finalAmount: booking.finalAmount,
+      discountAmount: booking.discountAmount,
+      couponCode: booking.couponCode,
+      amountToPay: amountToPay,
+    });
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amountToPay * 100), // Stripe needs cents
@@ -58,6 +137,9 @@ const createPayment = async (req, res) => {
         buyerId: booking.buyerId.toString(),
         eventId: booking.eventId.toString(),
         couponCode: booking?.couponCode || "none",
+        originalAmount: booking.totalAmount?.toString() || "0",
+        discountAmount: booking.discountAmount?.toString() || "0",
+        finalAmount: amountToPay.toString(),
       },
       description: `Payment for event: ${event.title}`,
       receipt_email: req.user?.email || undefined,
@@ -65,6 +147,13 @@ const createPayment = async (req, res) => {
 
     booking.paymentIntentId = paymentIntent.id;
     await booking.save();
+
+    console.log("Payment intent created:", {
+      paymentIntentId: paymentIntent.id,
+      amountInCents: paymentIntent.amount,
+      amountInDollars: paymentIntent.amount / 100,
+      currency: paymentIntent.currency,
+    });
 
     return res.status(201).json({
       success: true,
@@ -78,9 +167,11 @@ const createPayment = async (req, res) => {
       name: req.user?.name,
       couponCode: booking?.couponCode || null,
       discountAmount: booking?.discountAmount || 0,
+      originalAmount: booking.totalAmount,
+      finalAmount: amountToPay,
     });
   } catch (error) {
-    console.error("Create Payment error:", error);
+    console.error(" Create Payment error:", error);
     return res.status(500).json({
       message: "Internal Server Error",
       error: error.message || error,

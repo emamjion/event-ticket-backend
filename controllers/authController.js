@@ -367,7 +367,7 @@ const isAuthenticated = async (req, res) => {
 
 // forget password functionality
 const forgotPassword = async (req, res) => {
-  const { email } = req.user.email;
+  const email = req.user.email;
 
   if (!email) {
     return res.status(400).json({ message: "Email is required." });

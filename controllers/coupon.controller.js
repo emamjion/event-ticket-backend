@@ -1,3 +1,4 @@
+import BookingModel from "../models/booking.model.js";
 import CouponModel from "../models/coupon.model.js";
 import SellerModel from "../models/sellerModel.js";
 

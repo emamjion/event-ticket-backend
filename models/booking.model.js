@@ -20,9 +20,15 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
   seats: { type: [seatSchema], required: true },
+
   totalAmount: { type: Number, required: true },
+  discountAmount: { type: Number, default: 0 },
+  finalAmount: { type: Number },
+
+  couponCode: { type: String, default: null },
+
   bookingTime: { type: Date, default: Date.now },
-  paymentIntentId: String,
+  paymentIntentId: { type: String },
 
   isPaid: { type: Boolean, default: false },
   status: {
@@ -34,6 +40,7 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+
   isUserVisible: {
     type: Boolean,
     default: false,
@@ -42,6 +49,7 @@ const bookingSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+
   recipientEmail: {
     type: String,
     default: null,

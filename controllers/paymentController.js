@@ -21,7 +21,73 @@ const getSellerId = async (user) => {
   }
 };
 
-// phase - 01
+const createPayment = async (req, res) => {
+  const { bookingId } = req.body;
+
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId is required." });
+  }
+
+  try {
+    const booking = await BookingModel.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found." });
+    }
+
+    const existingOrder = await OrderModel.findOne({ bookingId });
+    if (existingOrder) {
+      return res.status(400).json({
+        message: "Payment already initiated for this booking.",
+        orderId: existingOrder._id,
+        paymentIntentId: existingOrder.paymentIntentId,
+      });
+    }
+
+    const event = await EventModel.findById(booking.eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    const amountToPay = booking.finalAmount || booking.totalAmount;
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amountToPay * 100), // Stripe needs cents
+      currency: "aud",
+      metadata: {
+        bookingId: booking._id.toString(),
+        buyerId: booking.buyerId.toString(),
+        eventId: booking.eventId.toString(),
+        couponCode: booking?.couponCode || "none",
+      },
+      description: `Payment for event: ${event.title}`,
+      receipt_email: req.user?.email || undefined,
+    });
+
+    booking.paymentIntentId = paymentIntent.id;
+    await booking.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Payment intent created. Proceed to payment.",
+      bookingId: booking._id,
+      clientSecret: paymentIntent.client_secret,
+      amount: amountToPay,
+      currency: "aud",
+      paymentIntentId: paymentIntent.id,
+      email: req.user?.email,
+      name: req.user?.name,
+      couponCode: booking?.couponCode || null,
+      discountAmount: booking?.discountAmount || 0,
+    });
+  } catch (error) {
+    console.error("Create Payment error:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message || error,
+    });
+  }
+};
+
 // const createPayment = async (req, res) => {
 //   const { bookingId } = req.body;
 
@@ -99,76 +165,6 @@ const getSellerId = async (user) => {
 // };
 
 // phase - 02
-const createPayment = async (req, res) => {
-  const { bookingId } = req.body;
-
-  if (!bookingId) {
-    return res.status(400).json({ message: "bookingId is required." });
-  }
-
-  try {
-    // 1. Get booking info
-    const booking = await BookingModel.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found." });
-    }
-
-    // 2. Prevent duplicate payment creation
-    const existingOrder = await OrderModel.findOne({ bookingId });
-    if (existingOrder) {
-      return res.status(400).json({
-        message: "Payment already initiated for this booking.",
-        orderId: existingOrder._id,
-        paymentIntentId: existingOrder.paymentIntentId,
-      });
-    }
-
-    // 3. Get event info
-    const event = await EventModel.findById(booking.eventId);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found." });
-    }
-
-    const quantity = booking.seats?.length || 1;
-
-    // 4. Create Stripe payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(booking.totalAmount * 100),
-      currency: "aud",
-      metadata: {
-        bookingId: booking._id.toString(),
-        buyerId: booking.buyerId.toString(),
-        eventId: booking.eventId.toString(),
-      },
-      description: `Payment for event: ${event.title}`,
-      receipt_email: req.user?.email || undefined,
-    });
-
-    console.log("payment intent:: ", paymentIntent);
-
-    // 5. Save paymentIntentId to booking
-    booking.paymentIntentId = paymentIntent.id;
-    await booking.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Payment intent created. Proceed to payment.",
-      bookingId: booking._id,
-      clientSecret: paymentIntent.client_secret,
-      amount: booking.totalAmount,
-      currency: "aud",
-      paymentIntentId: booking.paymentIntentId,
-      email: req.user?.email,
-      name: req.user?.name,
-    });
-  } catch (error) {
-    console.error("Create Payment error:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message || error,
-    });
-  }
-};
 
 // phase - 01
 // const confirmPayment = async (req, res) => {

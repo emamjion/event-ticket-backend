@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import transporter from "../config/nodeMailer.js";
 import UserModel from "../models/userModel.js";
 import { createToken } from "../utils/jwtToken.js";
@@ -366,7 +367,7 @@ const isAuthenticated = async (req, res) => {
 
 // forget password functionality
 const forgotPassword = async (req, res) => {
-  const { email } = req.body;
+  const { email } = req.user.email;
 
   if (!email) {
     return res.status(400).json({ message: "Email is required." });
@@ -380,7 +381,6 @@ const forgotPassword = async (req, res) => {
         .json({ message: "User not found with this email." });
     }
 
-    // .0Create JWT Reset Token (valid for 15 mins)
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET_TOKEN,
@@ -390,17 +390,8 @@ const forgotPassword = async (req, res) => {
     // Password reset link
     const resetLink = `https://www.eventsntickets.com.au/reset-password?token=${token}`;
 
-    // ✉️ Send email using nodemailer
-    const transporter = nodemailer.createTransport({
-      service: "gmail", // Or use custom SMTP
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     await transporter.sendMail({
-      from: `"Ticket Support" <${process.env.EMAIL_USER}>`,
+      from: `"Ticket Support" <${process.env.SENDER_EMAIL}>`,
       to: user.email,
       subject: "Reset your password",
       html: `
@@ -418,4 +409,42 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-export { createUser, isAuthenticated, loginUser, logoutUser, verifyOtp };
+const resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res
+      .status(400)
+      .json({ message: "Token and new password are required." });
+  }
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
+
+    const user = await UserModel.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful." });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res
+      .status(500)
+      .json({ message: "Token expired or invalid.", error: error.message });
+  }
+};
+
+export {
+  createUser,
+  forgotPassword,
+  isAuthenticated,
+  loginUser,
+  logoutUser,
+  verifyOtp,
+};

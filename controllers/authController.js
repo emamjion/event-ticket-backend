@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import transporter from "../config/nodeMailer.js";
 import UserModel from "../models/userModel.js";
 import { createToken } from "../utils/jwtToken.js";
@@ -214,39 +213,6 @@ const isAuthenticated = async (req, res) => {
   }
 };
 
-const resetPassword = async (req, res) => {
-  const { token, newPassword } = req.body;
-
-  if (!token || !newPassword) {
-    return res
-      .status(400)
-      .json({ message: "Token and new password are required." });
-  }
-
-  try {
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
-
-    const user = await UserModel.findById(decoded.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    res
-      .status(200)
-      .json({ success: true, message: "Password change successful." });
-  } catch (error) {
-    console.error("Reset Password Error:", error);
-    res
-      .status(500)
-      .json({ message: "Token expired or invalid.", error: error.message });
-  }
-};
-
 const sendResetOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -264,8 +230,30 @@ const sendResetOtp = async (req, res) => {
     await transporter.sendMail({
       from: process.env.SENDER_EMAIL,
       to: email,
-      subject: "Reset Your Password",
-      text: `Your password reset OTP is: ${otp}. It expires in 10 minutes.`,
+      subject: "🔐 Reset Your Password - Events N Tickets",
+      html: `
+    <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f6f8; color: #333;">
+      <div style="max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2 style="text-align: center; color: #cc3333;">Events N Tickets</h2>
+        <p style="font-size: 16px;">Hello <strong>${email}</strong>,</p>
+        <p style="font-size: 15px;">We received a request to reset your password. Please use the OTP below to proceed:</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="display: inline-block; background-color: #cc3333; color: white; font-size: 24px; font-weight: bold; padding: 12px 25px; border-radius: 8px; letter-spacing: 4px;">
+            ${otp}
+          </span>
+        </div>
+
+        <p style="font-size: 15px;">This OTP will expire in <strong>10 minutes</strong>.</p>
+        <p style="font-size: 15px;">If you did not request this, please ignore this email.</p>
+
+        <hr style="margin: 30px 0;" />
+        <p style="text-align: center; font-size: 13px; color: #888;">
+          &copy; ${new Date().getFullYear()} Events N Tickets. All rights reserved.
+        </p>
+      </div>
+    </div>
+  `,
     });
 
     res.status(200).json({ success: true, message: "OTP sent to your email." });
@@ -364,7 +352,6 @@ export {
   isAuthenticated,
   loginUser,
   logoutUser,
-  resetPassword,
   resetPasswordWithOtp,
   sendResetOtp,
   verifyOtp,

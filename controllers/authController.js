@@ -238,7 +238,7 @@ const resetPassword = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, message: "Password reset successful." });
+      .json({ success: true, message: "Password change successful." });
   } catch (error) {
     console.error("Reset Password Error:", error);
     res
@@ -310,7 +310,56 @@ const resetPasswordWithOtp = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required.",
+      });
+    }
+
+    const userId = req.user?.id;
+    const user = await UserModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password is incorrect.",
+      });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error("Change Password Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong while changing the password.",
+      error: error.message,
+    });
+  }
+};
+
 export {
+  changePassword,
   createUser,
   isAuthenticated,
   loginUser,

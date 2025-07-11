@@ -1,20 +1,17 @@
 import express from "express";
 import {
+  changePassword,
   createUser,
   isAuthenticated,
   loginUser,
   logoutUser,
-  resetPassword,
   resetPasswordWithOtp,
   sendResetOtp,
   verifyOtp,
 } from "../controllers/authController.js";
 import {
-  changePassword,
   deleteAccount,
-  // forgotPassword,
   getProfile,
-  // resetPassword,
   updateProfile,
 } from "../controllers/profileController.js";
 import upload from "../middleware/multer.js";
@@ -37,10 +34,9 @@ authRouter.put(
 );
 authRouter.delete("/profile", verifyToken, deleteAccount);
 
-authRouter.put("/change-password", verifyToken, changePassword);
 authRouter.post("/send-reset-otp", sendResetOtp);
 authRouter.post("/reset-password", resetPasswordWithOtp);
-authRouter.post("/reset-password", verifyToken, resetPassword);
+authRouter.put("/change-password", verifyToken, changePassword);
 
 // send verify otp route
 // authRouter.post("/send-verify-otp", verifyToken, sendVerifyOtp);

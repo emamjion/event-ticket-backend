@@ -278,12 +278,45 @@ const sendResetOtp = async (req, res) => {
   }
 };
 
+const resetPasswordWithOtp = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await UserModel.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    const hashedOtp = hashOTP(otp);
+
+    if (user.resetOtp !== hashedOtp || user.resetOtpExpireAt < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    user.resetOtp = "";
+    user.resetOtpExpireAt = 0;
+    await user.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Password reset successful." });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error in resetPasswordWithOtp controller",
+      error: error.message,
+    });
+  }
+};
+
 export {
   createUser,
   isAuthenticated,
   loginUser,
   logoutUser,
   resetPassword,
+  resetPasswordWithOtp,
   sendResetOtp,
   verifyOtp,
 };

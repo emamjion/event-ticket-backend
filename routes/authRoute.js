@@ -5,6 +5,7 @@ import {
   loginUser,
   logoutUser,
   resetPassword,
+  resetPasswordWithOtp,
   sendResetOtp,
   verifyOtp,
 } from "../controllers/authController.js";
@@ -38,6 +39,7 @@ authRouter.delete("/profile", verifyToken, deleteAccount);
 
 authRouter.put("/change-password", verifyToken, changePassword);
 authRouter.post("/send-reset-otp", sendResetOtp);
+authRouter.post("/reset-password", resetPasswordWithOtp);
 authRouter.post("/reset-password", verifyToken, resetPassword);
 
 // send verify otp route

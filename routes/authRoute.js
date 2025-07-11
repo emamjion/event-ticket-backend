@@ -1,11 +1,11 @@
 import express from "express";
 import {
   createUser,
-  forgotPassword,
   isAuthenticated,
   loginUser,
   logoutUser,
   resetPassword,
+  sendResetOtp,
   verifyOtp,
 } from "../controllers/authController.js";
 import {
@@ -37,7 +37,7 @@ authRouter.put(
 authRouter.delete("/profile", verifyToken, deleteAccount);
 
 authRouter.put("/change-password", verifyToken, changePassword);
-authRouter.post("/forget-password", verifyToken, forgotPassword);
+authRouter.post("/send-reset-otp", sendResetOtp);
 authRouter.post("/reset-password", verifyToken, resetPassword);
 
 // send verify otp route

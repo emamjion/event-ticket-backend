@@ -138,20 +138,40 @@ const sendOrderEmail = async (req, res) => {
     const mailOptionsForBuyer = {
       from: process.env.SENDER_EMAIL,
       to: buyerEmail,
-      subject: `Your Ticket & Invoice for ${event.title}`,
+      subject: `🎫 Your Ticket & Invoice for ${event.title}`,
       html: `
-        <div style="font-family:sans-serif;">
-          <h2>Hello ${buyerName},</h2>
-          <p>Thank you for booking your ticket with us!</p>
-          <p><strong>Event:</strong> ${event.title}</p>
-          <p><strong>Seats:</strong> ${order.seats.join(", ")}</p>
-          <p><strong>Ticket Code:</strong> ${order.ticketCode}</p>
-          <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
-          <p>Please find both your <strong>ticket</strong> and <strong>invoice</strong> PDFs attached below.</p>
-          <br/>
-          <p>Enjoy the event! 🎉</p>
+    <div style="font-family: Arial, sans-serif; background-color: #f8f8f8; padding: 30px;">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+        <h2 style="text-align: center; color: #cc3333;">Events N Tickets</h2>
+        <p style="font-size: 16px;">Hello <strong>${buyerName}</strong>,</p>
+        <p style="font-size: 15px;">🎉 Thank you for booking your ticket with <strong>Events N Tickets</strong>!</p>
+
+        <div style="margin: 20px 0;">
+          <p style="font-size: 15px;"><strong>🎤 Event:</strong> ${
+            event.title
+          }</p>
+          <p style="font-size: 15px;"><strong>🪑 Seats:</strong> ${order.seats.join(
+            ", "
+          )}</p>
+          <p style="font-size: 15px;"><strong>🎟️ Ticket Code:</strong> <span style="color: #cc3333;">${
+            order.ticketCode
+          }</span></p>
+          <p style="font-size: 15px;"><strong>💵 Total Paid:</strong> <span style="color: #28a745;">$${
+            order.totalAmount
+          }</span></p>
         </div>
-      `,
+
+        <p style="font-size: 15px;">Your <strong>ticket</strong> and <strong>invoice</strong> PDFs are attached below. Please bring them to the event (printed or on your phone).</p>
+
+        <div style="margin: 30px 0; text-align: center;">
+          <p style="font-size: 16px;">Enjoy the event! 🎊</p>
+        </div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;" />
+        <p style="text-align: center; font-size: 13px; color: #999;">&copy; ${new Date().getFullYear()} Events N Tickets. All rights reserved.</p>
+      </div>
+    </div>
+  `,
       attachments: [
         {
           filename: `ticket-${order._id}.pdf`,
@@ -172,8 +192,7 @@ const sendOrderEmail = async (req, res) => {
     // ==========================
     const sellerName = order?.sellerId?.name || "Organizer";
     const sellerEmail = order?.sellerId?.email;
-    const sellerPhone = order?.sellerId?.phone || "N/A";
-    console.log("Seller email: ", sellerEmail);
+    const sellerPhone = order?.sellerId?.contactNumber || "N/A";
 
     // Check if seller's email exists
     if (sellerEmail) {

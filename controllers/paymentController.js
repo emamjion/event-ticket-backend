@@ -129,9 +129,15 @@ const createPayment = async (req, res) => {
       amountToPay: amountToPay,
     });
 
+    const customer = await stripe.customers.create({
+      name: req.user?.name || "Guest User",
+      email: req.user?.email,
+    });
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amountToPay * 100), // Stripe needs cents
+      amount: Math.round(amountToPay * 100),
       currency: "aud",
+      customer: customer.id,
       metadata: {
         bookingId: booking._id.toString(),
         buyerId: booking.buyerId.toString(),

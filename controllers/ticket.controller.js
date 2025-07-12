@@ -135,24 +135,38 @@ const sendOrderEmail = async (req, res) => {
     // ==========================
     // Send Email to Buyer
     // ==========================
+    const formattedSeats = order.seats
+      .map((seat, index) => {
+        return `
+    <tr>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
+        index + 1
+      }</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${seat.section}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${seat.row}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${seat.seatNumber}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">$${seat.price}</td>
+    </tr>
+  `;
+      })
+      .join("");
+
     const mailOptionsForBuyer = {
       from: process.env.SENDER_EMAIL,
       to: buyerEmail,
       subject: `🎫 Your Ticket & Invoice for ${event.title}`,
       html: `
     <div style="font-family: Arial, sans-serif; background-color: #f8f8f8; padding: 30px;">
-      <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
         <h2 style="text-align: center; color: #cc3333;">Events N Tickets</h2>
+
         <p style="font-size: 16px;">Hello <strong>${buyerName}</strong>,</p>
         <p style="font-size: 15px;">🎉 Thank you for booking your ticket with <strong>Events N Tickets</strong>!</p>
 
-        <div style="margin: 20px 0;">
+        <div style="margin: 25px 0;">
           <p style="font-size: 15px;"><strong>🎤 Event:</strong> ${
             event.title
           }</p>
-          <p style="font-size: 15px;"><strong>🪑 Seats:</strong> ${order.seats.join(
-            ", "
-          )}</p>
           <p style="font-size: 15px;"><strong>🎟️ Ticket Code:</strong> <span style="color: #cc3333;">${
             order.ticketCode
           }</span></p>
@@ -161,10 +175,26 @@ const sendOrderEmail = async (req, res) => {
           }</span></p>
         </div>
 
-        <p style="font-size: 15px;">Your <strong>ticket</strong> and <strong>invoice</strong> PDFs are attached below. Please bring them to the event (printed or on your phone).</p>
+        <h3 style="margin-top: 30px; font-size: 16px; color: #444;">🪑 Seat Details:</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #f0f0f0;">
+              <th style="padding: 8px; border: 1px solid #ddd;">#</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Section</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Row</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Seat Number</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${formattedSeats}
+          </tbody>
+        </table>
+
+        <p style="font-size: 15px; margin-top: 25px;">Your <strong>ticket</strong> and <strong>invoice</strong> PDFs are attached below. Please bring them to the event (printed or on your phone).</p>
 
         <div style="margin: 30px 0; text-align: center;">
-          <p style="font-size: 16px;">Enjoy the event! 🎊</p>
+          <p style="font-size: 15px;">Enjoy the event! 🎊</p>
         </div>
 
         <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;" />

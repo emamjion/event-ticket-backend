@@ -792,25 +792,20 @@ const refundAndCancel = async (req, res) => {
 
     if (!orderId || !seatToCancel) {
       return res.status(400).json({
+        success: false,
         message: "Order ID and seat to cancel are required.",
       });
     }
 
-    const { section, row, seatNumber, price } = seatToCancel;
+    const { section, row, seatNumber } = seatToCancel;
 
-    if (typeof price !== "number") {
-      return res.status(400).json({
-        message: "Seat price must be provided for cancellation.",
-      });
-    }
-
-    // Find order
     const order = await OrderModel.findById(orderId);
     if (!order) {
-      return res.status(404).json({ message: "Order not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found." });
     }
 
-    // Find seat in order
     const seatIndex = order.seats.findIndex(
       (seat) =>
         seat.section === section &&
@@ -820,15 +815,16 @@ const refundAndCancel = async (req, res) => {
 
     if (seatIndex === -1) {
       return res.status(404).json({
-        message: "Seat not found or already removed.",
+        success: false,
+        message: "Seat not found or already cancelled.",
       });
     }
 
-    // Refund via Stripe
     if (!order.paymentIntentId) {
-      return res
-        .status(400)
-        .json({ message: "No payment intent found for refund." });
+      return res.status(400).json({
+        success: false,
+        message: "No payment intent found for refund.",
+      });
     }
 
     let paymentIntent;
@@ -838,23 +834,47 @@ const refundAndCancel = async (req, res) => {
       );
     } catch (err) {
       return res.status(400).json({
+        success: false,
         message: "Invalid or expired payment intent.",
         error: err.message,
       });
     }
 
+    const booking = await BookingModel.findById(order.bookingId);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Associated booking not found.",
+      });
+    }
+
+    const totalPaid = booking.finalAmount || booking.totalAmount;
+    const totalSeats = order.seats.length;
+
+    const refundAmount = Math.floor((totalPaid / totalSeats) * 100); // in cents
+
+    if (refundAmount > paymentIntent.amount) {
+      return res.status(400).json({
+        success: false,
+        message: `Refund amount ($${
+          refundAmount / 100
+        }) exceeds paid amount ($${paymentIntent.amount / 100}).`,
+      });
+    }
+
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntent.id,
-      amount: Math.floor(price * 100),
+      amount: refundAmount,
     });
 
-    // Remove seat from OrderModel
     order.seats.splice(seatIndex, 1);
-    order.totalAmount = Math.max(0, order.totalAmount - price);
+    order.totalAmount = Math.max(
+      0,
+      order.totalAmount - (seatToCancel.price || 0)
+    );
     order.quantity = order.seats.length;
 
     let orderDeleted = false;
-
     if (order.seats.length === 0) {
       await OrderModel.findByIdAndDelete(order._id);
       orderDeleted = true;
@@ -862,7 +882,6 @@ const refundAndCancel = async (req, res) => {
       await order.save();
     }
 
-    // Remove seat from BookingModel
     await BookingModel.updateOne(
       { _id: order.bookingId },
       {
@@ -876,16 +895,13 @@ const refundAndCancel = async (req, res) => {
       }
     );
 
-    // If no seats left in booking, delete booking
     const updatedBooking = await BookingModel.findById(order.bookingId);
     let bookingDeleted = false;
-
     if (updatedBooking && updatedBooking.seats.length === 0) {
       await BookingModel.findByIdAndDelete(order.bookingId);
       bookingDeleted = true;
     }
 
-    // Remove seat from EventModel
     const event = await EventModel.findById(order.eventId);
     if (event) {
       event.seats = event.seats.filter(
@@ -910,6 +926,7 @@ const refundAndCancel = async (req, res) => {
     }
 
     return res.status(200).json({
+      success: true,
       message: `Seat cancelled and refund successful.${
         orderDeleted ? " Order deleted." : ""
       }${bookingDeleted ? " Booking deleted." : ""}`,
@@ -921,6 +938,7 @@ const refundAndCancel = async (req, res) => {
   } catch (error) {
     console.error("Cancel Seat Error:", error);
     return res.status(500).json({
+      success: false,
       message: "Internal server error.",
       error: error.message,
     });

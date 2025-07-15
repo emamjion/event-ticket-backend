@@ -14,7 +14,7 @@ const sellerRequestSchema = new mongoose.Schema(
       lowercase: true,
       unique: true,
     },
-    shopName: {
+    organizationName: {
       type: String,
       required: true,
       trim: true,

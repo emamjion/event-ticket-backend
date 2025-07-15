@@ -3,10 +3,16 @@ import SellerRequestModel from "../models/sellerRequestModel.js";
 // function for submitting a seller request
 const submitSellerRequest = async (req, res) => {
   try {
-    const { name, email, shopName, bio, contactNumber, address, website } =
-      req.body;
+    const {
+      name,
+      email,
+      organizationName,
+      bio,
+      contactNumber,
+      address,
+      website,
+    } = req.body;
 
-    // Check if already requested
     const existing = await SellerRequestModel.findOne({ email });
 
     if (existing) {
@@ -19,7 +25,7 @@ const submitSellerRequest = async (req, res) => {
     const request = await SellerRequestModel.create({
       name,
       email,
-      shopName,
+      organizationName,
       bio,
       contactNumber,
       address,

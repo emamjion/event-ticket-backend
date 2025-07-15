@@ -1,5 +1,6 @@
 import transporter from "../config/nodeMailer.js";
 import OrderModel from "../models/orderModel.js";
+import TicketModel from "../models/ticket.model.js";
 import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 import generateOrderTicketPDF from "../utils/generateOrderTicketPDF.js";
 
@@ -268,76 +269,48 @@ const sendOrderEmail = async (req, res) => {
   }
 };
 
-// With simple email
-// const sendOrderEmail = async (req, res) => {
-//   try {
-//     const { orderId } = req.body;
+const uploadTicket = async (req, res) => {
+  try {
+    const { orderId, buyerId, eventId } = req.body;
+    if (!orderId || !buyerId || !eventId) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID, Buyer ID, and Event ID are required.",
+      });
+    }
 
-//     if (!orderId) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "orderId is required." });
-//     }
+    const pdfFile = req.file;
+    if (!pdfFile) {
+      return res.status(400).json({
+        success: false,
+        message: "PDF file is required.",
+      });
+    }
 
-//     const order = await OrderModel.findById(orderId).populate(
-//       "eventId buyerId"
-//     );
-//     if (!order) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Order not found." });
-//     }
+    const ticket = new TicketModel({
+      orderId,
+      eventId,
+      buyerId,
+      pdf: {
+        data: pdfFile.buffer,
+        contentType: pdfFile.mimetype,
+      },
+    });
+    await ticket.save();
 
-//     const buyerName = order?.buyerId?.name || "Customer";
-//     const buyerEmail = order?.buyerId?.email;
+    res.status(201).json({
+      success: true,
+      message: "Ticket saved successfully!",
+      ticketId: ticket._id,
+    });
+  } catch (error) {
+    console.log("Error in upload ticket controller");
+    res.status(500).json({
+      success: false,
+      message: "Error in upload ticket controller",
+      error: error.message,
+    });
+  }
+};
 
-//     if (!buyerEmail) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Buyer email not found." });
-//     }
-
-//     const event = order.eventId;
-//     const eventName = event?.name || "Event";
-
-//     // PDF jodi pathate chao:
-//     // const pdfBuffer = await generateTicketPDF(order);
-
-//     const mailOptions = {
-//       from: process.env.SENDER_EMAIL,
-//       to: buyerEmail,
-//       subject: `🎟 Your Ticket for ${eventName}`,
-//       html: `
-//         <div style="font-family:sans-serif;">
-//           <h2>Hello ${buyerName},</h2>
-//           <p>Thank you for booking your ticket with us!</p>
-//           <p><strong>Event:</strong> ${eventName}</p>
-//           <p><strong>Seats:</strong> ${order.seats.join(", ")}</p>
-//           <p><strong>Ticket Code:</strong> ${order.ticketCode}</p>
-//           <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
-//           <br/>
-//           <p>Show this ticket at the venue gate.</p>
-//           <p>Enjoy the event! 🎉</p>
-//         </div>
-//       `,
-//       // attachments: [
-//       //   {
-//       //     filename: `ticket-${order._id}.pdf`,
-//       //     content: pdfBuffer,
-//       //   },
-//       // ],
-//     };
-
-//     await transporter.sendMail(mailOptions);
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Email sent successfully.",
-//     });
-//   } catch (error) {
-//     console.error("Send Order Email Error:", error);
-//     res.status(500).json({ success: false, message: "Failed to send email." });
-//   }
-// };
-
-export { sendOrderEmail, verifyTicket };
+export { sendOrderEmail, uploadTicket, verifyTicket };

@@ -19,16 +19,10 @@ const ticketSchema = new mongoose.Schema({
     required: true,
   },
 
-  pdf: {
-    data: {
-      type: Buffer,
-      required: true,
-    },
-    contentType: {
-      type: String,
-      required: true,
-    },
-  },
+  pdfUrl: {
+  type: String,
+  required: true,
+},
 
   createdAt: {
     type: Date,

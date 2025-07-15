@@ -1,8 +1,14 @@
+import { v2 as cloudinary } from "cloudinary";
 import transporter from "../config/nodeMailer.js";
 import OrderModel from "../models/orderModel.js";
 import TicketModel from "../models/ticket.model.js";
 import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 import generateOrderTicketPDF from "../utils/generateOrderTicketPDF.js";
+
+// helper function
+const bufferToDataUri = (fileFormat, buffer) => {
+  return `data:application/${fileFormat};base64,${buffer.toString("base64")}`;
+};
 
 // const verifyTicket = async (req, res) => {
 //   const { orderId } = req.params;
@@ -104,7 +110,7 @@ const sendOrderEmail = async (req, res) => {
 
     // Fetch order and populate event, buyer, and seller details
     const order = await OrderModel.findById(orderId).populate(
-      "eventId buyerId sellerId"
+      "eventId buyerId sellerId adminId"
     );
     if (!order) {
       return res
@@ -120,7 +126,7 @@ const sendOrderEmail = async (req, res) => {
     const customer = {
       name: order?.buyerId?.name || "Customer",
       email: order?.buyerId?.email || "unknown@example.com",
-      phone: order?.buyerId?.phone || "N/A", // If phone is optional
+      phone: order?.buyerId?.phone || "N/A",
     };
 
     if (!buyerEmail || !event) {
@@ -131,7 +137,7 @@ const sendOrderEmail = async (req, res) => {
 
     // 🧾 Generate both PDFs for buyer and seller
     const ticketPdfBuffer = await generateOrderTicketPDF(order, event);
-    const invoicePdfBuffer = await generateInvoicePDF(order, event, customer); // <- your utility
+    const invoicePdfBuffer = await generateInvoicePDF(order, event, customer);
 
     // ==========================
     // Send Email to Buyer
@@ -258,6 +264,48 @@ const sendOrderEmail = async (req, res) => {
       await transporter.sendMail(sellerMailOptions);
     }
 
+    // ==========================
+    // Send Email to Admin
+    // ==========================
+    const adminName = order?.adminId?.name || "Admin";
+    const adminEmail = order?.adminId?.email;
+
+    if (adminEmail) {
+      const adminMailOptions = {
+        from: process.env.SENDER_EMAIL,
+        to: adminEmail,
+        subject: `📥 Booking Notification | ${event.title}`,
+        html: `
+      <div style="font-family: sans-serif;">
+        <h2>Hello ${adminName},</h2>
+        <p>A new booking has been made for the event <strong>${
+          event.title
+        }</strong>.</p>
+        <p><strong>Buyer:</strong> ${buyerName} (${buyerEmail})</p>
+        <p><strong>Organizer:</strong> ${sellerName} (${
+          sellerEmail || "N/A"
+        })</p>
+        <p><strong>Seats:</strong> ${order.seats
+          .map((s) => `${s.section}-${s.row}-${s.seatNumber}`)
+          .join(", ")}</p>
+        <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
+        <p>Attached is the invoice PDF for your record.</p>
+        <br/>
+        <p>Regards,</p>
+        <p>Events N Tickets</p>
+      </div>
+    `,
+        attachments: [
+          {
+            filename: `invoice-${order._id}.pdf`,
+            content: invoicePdfBuffer,
+          },
+        ],
+      };
+
+      await transporter.sendMail(adminMailOptions);
+    }
+
     // Respond with success
     res.status(200).json({
       success: true,
@@ -272,6 +320,7 @@ const sendOrderEmail = async (req, res) => {
 const uploadTicket = async (req, res) => {
   try {
     const { orderId, buyerId, eventId } = req.body;
+
     if (!orderId || !buyerId || !eventId) {
       return res.status(400).json({
         success: false,
@@ -279,38 +328,202 @@ const uploadTicket = async (req, res) => {
       });
     }
 
-    const pdfFile = req.file;
-    if (!pdfFile) {
+    const files = req.files;
+
+    if (!files || files.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "PDF file is required.",
+        message: "At least one PDF file is required.",
       });
     }
 
-    const ticket = new TicketModel({
-      orderId,
-      eventId,
-      buyerId,
-      pdf: {
-        data: pdfFile.buffer,
-        contentType: pdfFile.mimetype,
-      },
-    });
-    await ticket.save();
+    const uploadedTickets = [];
+
+    for (const file of files) {
+      const fileFormat = file.originalname.split(".").pop();
+      const fileDataUri = bufferToDataUri(fileFormat, file.buffer);
+
+      const uploadResult = await cloudinary.uploader.upload(fileDataUri, {
+        resource_type: "raw",
+        folder: "event-tickets",
+        public_id: `ticket_${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(2, 8)}`,
+      });
+
+      const ticket = new TicketModel({
+        orderId,
+        buyerId,
+        eventId,
+        pdfUrl: uploadResult.secure_url,
+      });
+
+      await ticket.save();
+
+      uploadedTickets.push({
+        ticketId: ticket._id,
+        pdfUrl: ticket.pdfUrl,
+      });
+    }
 
     res.status(201).json({
       success: true,
-      message: "Ticket saved successfully!",
-      ticketId: ticket._id,
+      message: "Tickets uploaded and saved successfully!",
+      uploadedTickets,
     });
   } catch (error) {
-    console.log("Error in upload ticket controller");
+    console.error("Error in uploadTicket:", error);
     res.status(500).json({
       success: false,
-      message: "Error in upload ticket controller",
+      message: "Internal server error",
       error: error.message,
     });
   }
 };
 
-export { sendOrderEmail, uploadTicket, verifyTicket };
+// function to send email
+const sendEmailToBuyer = async (req, res) => {
+  try {
+    const { ticketId } = req.body;
+
+    if (!ticketId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "ticketId is required." });
+    }
+
+    const ticket = await TicketModel.findById(ticketId)
+      .populate("buyerId")
+      .populate("eventId")
+      .populate("orderId");
+
+    if (!ticket) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Ticket not found." });
+    }
+
+    if (!ticket.pdf?.data) {
+      return res
+        .status(400)
+        .json({ success: false, message: "PDF not found in ticket." });
+    }
+
+    const buyer = ticket.buyerId;
+    const event = ticket.eventId;
+    const order = ticket.orderId;
+
+    const customer = {
+      name: order?.buyerId?.name || "Customer",
+      email: order?.buyerId?.email || "unknown@example.com",
+      phone: order?.buyerId?.phone || "N/A",
+    };
+
+    if (!buyer?.email || !event) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing buyer or event info." });
+    }
+
+    const invoicePdfBuffer = await generateInvoicePDF(order, event, customer);
+
+    const buyerName = buyer.name || "Customer";
+    const buyerEmail = buyer.email;
+
+    const formattedSeats = order.seats
+      .map((seat, index) => {
+        return `
+    <tr>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
+        index + 1
+      }</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${seat.section}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${seat.row}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">${seat.seatNumber}</td>
+      <td style="padding: 8px; border: 1px solid #ddd;">$${seat.price}</td>
+    </tr>
+  `;
+      })
+      .join("");
+
+    const mailOptionsForBuyer = {
+      from: process.env.SENDER_EMAIL,
+      to: buyerEmail,
+      subject: `🎫 Your Ticket & Invoice for ${event.title}`,
+      html: `
+    <div style="font-family: Arial, sans-serif; background-color: #f8f8f8; padding: 30px;">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+        <h2 style="text-align: center; color: #cc3333;">Events N Tickets</h2>
+
+        <p style="font-size: 16px;">Hello <strong>${buyerName}</strong>,</p>
+        <p style="font-size: 15px;">🎉 Thank you for booking your ticket with <strong>Events N Tickets</strong>!</p>
+
+        <div style="margin: 25px 0;">
+          <p style="font-size: 15px;"><strong>🎤 Event:</strong> ${
+            event.title
+          }</p>
+          <p style="font-size: 15px;"><strong>🎟️ Ticket Code:</strong> <span style="color: #cc3333;">${
+            order.ticketCode
+          }</span></p>
+          <p style="font-size: 15px;"><strong>💵 Total Paid:</strong> <span style="color: #28a745;">$${
+            order.totalAmount
+          }</span></p>
+        </div>
+
+        <h3 style="margin-top: 30px; font-size: 16px; color: #444;">🪑 Seat Details:</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px;">
+          <thead>
+            <tr style="background-color: #f0f0f0;">
+              <th style="padding: 8px; border: 1px solid #ddd;">#</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Section</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Row</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Seat Number</th>
+              <th style="padding: 8px; border: 1px solid #ddd;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${formattedSeats}
+          </tbody>
+        </table>
+
+        <p style="font-size: 15px; margin-top: 25px;">Your <strong>ticket</strong> and <strong>invoice</strong> PDFs are attached below. Please bring them to the event (printed or on your phone).</p>
+
+        <div style="margin: 30px 0; text-align: center;">
+          <p style="font-size: 15px;">Enjoy the event! 🎊</p>
+        </div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;" />
+        <p style="text-align: center; font-size: 13px; color: #999;">&copy; ${new Date().getFullYear()} Events N Tickets. All rights reserved.</p>
+      </div>
+    </div>
+  `,
+      attachments: [
+        {
+          filename: `ticket-${ticket._id}.pdf`,
+          content: ticket.pdf.data,
+          contentType: "application/pdf",
+        },
+        {
+          filename: `invoice-${order._id}.pdf`,
+          content: invoicePdfBuffer,
+        },
+      ],
+    };
+
+    await transporter.sendMail(mailOptionsForBuyer);
+
+    res.status(200).json({
+      success: true,
+      message: "Email sent successfully",
+    });
+  } catch (error) {
+    console.error("Send Order Email Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send email.",
+      error: error.message,
+    });
+  }
+};
+
+export { sendEmailToBuyer, sendOrderEmail, uploadTicket, verifyTicket };

@@ -55,11 +55,6 @@ const orderSchema = new mongoose.Schema(
       ref: "Seller",
       required: true,
     },
-    adminId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
     quantity: {
       type: Number,
       required: true,

@@ -110,7 +110,7 @@ const sendOrderEmail = async (req, res) => {
 
     // Fetch order and populate event, buyer, and seller details
     const order = await OrderModel.findById(orderId).populate(
-      "eventId buyerId sellerId adminId"
+      "eventId buyerId sellerId"
     );
     if (!order) {
       return res
@@ -259,25 +259,28 @@ const sendOrderEmail = async (req, res) => {
           },
         ],
       };
-
-      // Send email to the seller (organizer)
       await transporter.sendMail(sellerMailOptions);
     }
 
     // ==========================
     // Send Email to Admin
     // ==========================
-    const adminName = order?.adminId?.name || "Admin";
-    const adminEmail = order?.adminId?.email;
+    // const adminName = order?.adminId?.name || "Admin";
+    // const adminEmail = order?.adminId?.email;
 
-    if (adminEmail) {
+    const adminEmails = [
+      process.env.ADMIN_EMAIL,
+      process.env.ADMIN_SECOND_EMAIL,
+    ].filter(Boolean);
+
+    if (adminEmails.length > 0) {
       const adminMailOptions = {
         from: process.env.SENDER_EMAIL,
-        to: adminEmail,
+        to: adminEmails,
         subject: `📥 Booking Notification | ${event.title}`,
         html: `
       <div style="font-family: sans-serif;">
-        <h2>Hello ${adminName},</h2>
+        <h2>Hello Admin,</h2>
         <p>A new booking has been made for the event <strong>${
           event.title
         }</strong>.</p>

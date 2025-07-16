@@ -27,122 +27,95 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.on("error", reject);
 
     // ========================
-    // PDF Layout and Design - ENHANCED TO MATCH FRONTEND
+    // PDF Layout and Design - RESTORED HEIGHT
     // ========================
 
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
-    const margin = 15; // Reduced margin like frontend
+    const margin = 20;
     const contentWidth = pageWidth - margin * 2;
-    const contentHeight = pageHeight - margin * 2;
+    const ticketHeight = 600; // INCREASED HEIGHT BACK TO SHOW ALL CONTENT
 
-    // Color palette (matching frontend exactly)
-    const colors = {
-      primary: [108, 117, 125], // Gray for header background
-      secondary: [73, 80, 87], // Darker gray
-      dark: [45, 55, 72], // Dark gray
-      light: [247, 250, 252], // Light gray
-      white: [255, 255, 255],
-      success: [34, 197, 94], // Green
-      danger: [239, 68, 68], // Red
-      border: [229, 231, 235], // Border gray
-      accent: [224, 88, 41], // Orange for accents
-    };
+    // ----- BACKGROUND -----
+    doc.rect(0, 0, pageWidth, pageHeight).fill("#f7fafc");
 
-    // ----- BACKGROUND AND MAIN CONTAINER -----
+    // ----- MAIN TICKET CONTAINER (TALLER) -----
+    doc.fillColor("#ffffff");
+    doc.roundedRect(margin, margin, contentWidth, ticketHeight, 8).fill();
 
-    // Background with subtle gradient effect
-    doc.fillColor(colors.light[0], colors.light[1], colors.light[2]);
-    doc.rect(0, 0, pageWidth, pageHeight).fill();
+    // Container border
+    doc.lineWidth(1.5).strokeColor("#e5e7eb");
+    doc.roundedRect(margin, margin, contentWidth, ticketHeight, 8).stroke();
 
-    // Main ticket card (height increased to 240 like frontend)
-    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
-    doc.roundedRect(margin, margin, contentWidth, 240, 5).fill();
+    // ----- HEADER SECTION -----
+    const headerHeight = 80;
 
-    // Card border
-    doc.strokeColor(colors.border[0], colors.border[1], colors.border[2]);
-    doc.lineWidth(1);
-    doc.roundedRect(margin, margin, contentWidth, 240, 5).stroke();
+    // Header background
+    doc.fillColor("#6c757d");
+    doc.roundedRect(margin, margin, contentWidth, headerHeight, 8).fill();
 
-    // ----- HEADER SECTION (ENHANCED) -----
+    // Square off bottom of header
+    doc.rect(margin, margin + headerHeight - 8, contentWidth, 8).fill();
 
-    // Main header background (35px height like frontend)
-    doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.roundedRect(margin, margin, contentWidth, 35, 5).fill();
+    // Logo Section - INCREASED SIZE AND WIDTH
+    const logoWidth = 60; // INCREASED width
+    const logoHeight = 40; // INCREASED height
+    const logoX = margin + 20;
+    const logoY = margin + 20;
 
-    // Header bottom rectangle to square off bottom corners
-    doc.rect(margin, margin + 30, contentWidth, 5).fill();
+    doc.fillColor("#ffffff");
+    doc.roundedRect(logoX, logoY, logoWidth, logoHeight, 4).fill();
 
-    // Logo placeholder (enhanced)
-    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
-    doc.roundedRect(margin + 8, margin + 5, 24, 24, 3).fill();
-    doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.fontSize(8).font("Helvetica-Bold");
-    doc.text("LOGO", margin + 20, margin + 14, { align: "center", width: 0 });
+    // Logo border
+    doc.lineWidth(1).strokeColor("#6c757d");
+    doc.roundedRect(logoX, logoY, logoWidth, logoHeight, 4).stroke();
 
-    // Event title in header (enhanced)
+    // Logo text - better centered in larger logo
+    doc.fillColor("#6c757d").fontSize(12).font("Helvetica-Bold");
+    const logoText = "LOGO";
+    const logoTextWidth = doc.widthOfString(logoText);
+    const logoTextX = logoX + (logoWidth - logoTextWidth) / 2;
+    const logoTextY = logoY + (logoHeight - 12) / 2;
+    doc.text(logoText, logoTextX, logoTextY);
+
+    // Event title - adjusted for larger logo
     const eventTitle = event?.title || "Event";
     const displayTitle =
-      eventTitle.length > 40 ? eventTitle.slice(0, 37) + "..." : eventTitle;
+      eventTitle.length > 25 ? eventTitle.slice(0, 22) + "..." : eventTitle;
 
-    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
-    doc.font("Helvetica-Bold").fontSize(14);
-    doc.text(displayTitle, margin + 40, margin + 18);
+    const titleX = logoX + logoWidth + 20;
+    const titleY = logoY + 12;
 
-    // Single ticket badge (enhanced positioning)
-    const badgeWidth = 30;
-    doc.fillColor(
-      colors.secondary[0],
-      colors.secondary[1],
-      colors.secondary[2]
-    );
-    doc
-      .roundedRect(
-        margin + contentWidth - badgeWidth - 5,
-        margin + 8,
-        badgeWidth,
-        20,
-        3
-      )
-      .fill();
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(18);
+    doc.text(displayTitle, titleX, titleY);
 
-    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
-    doc.font("Helvetica-Bold").fontSize(8);
-    doc.text("1 TICKET", margin + contentWidth - badgeWidth + 15, margin + 15, {
-      align: "center",
-      width: 0,
-    });
+    // Ticket badge - moved further to the left and centered text
+    const badgeWidth = 80;
+    const badgeHeight = 30;
+    const badgeX = margin + contentWidth - badgeWidth - 60; // MOVED FURTHER TO THE LEFT
+    const badgeY = margin + 25;
 
-    // ----- MAIN CONTENT AREA (REDESIGNED TO MATCH FRONTEND) -----
+    doc.fillColor("#495057");
+    doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 5).fill();
 
-    const contentY = margin + 50; // Start content right after header
-    const leftColWidth = contentWidth * 0.55;
-    const rightColStart = margin + leftColWidth + 10;
-    const rightColWidth = contentWidth * 0.4;
+    // Center the "1 TICKET" text properly
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(9);
+    const badgeText = "1 TICKET";
+    const badgeTextWidth = doc.widthOfString(badgeText);
+    const badgeTextX = badgeX + (badgeWidth - badgeTextWidth) / 2;
+    const badgeTextY = badgeY + (badgeHeight - 9) / 2;
+    doc.text(badgeText, badgeTextX, badgeTextY);
 
-    // ----- LEFT COLUMN: EVENT & TICKET DETAILS -----
+    // ----- CONTENT AREA -----
+    const contentY = margin + headerHeight + 30;
+    const leftColX = margin + 25;
+    const rightColX = margin + contentWidth * 0.55; // MOVED RIGHT COLUMN MORE TO THE LEFT
+    const lineHeight = 20;
+    const sectionGap = 25;
 
     let currentY = contentY;
-    const lineHeight = 6;
-    const sectionGap = 12;
 
-    // Helper function to add section headers
-    const addSectionHeader = (title, y) => {
-      doc.fillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
-      doc.fontSize(12).font("Helvetica-Bold");
-      doc.text(title, margin + 5, y);
-      return y + 8;
-    };
-
-    // Helper function to add content text
-    const addContentText = (text, y, indent = 5) => {
-      doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-      doc.fontSize(10).font("Helvetica");
-      doc.text(text, margin + indent, y);
-      return y + lineHeight;
-    };
-
-    // Helper function to format date
+    // Format helpers
     const formatDate = (dateString) => {
       if (!dateString) return "Date TBA";
       try {
@@ -158,7 +131,6 @@ const generateOrderTicketPDF = async (order, event) => {
       }
     };
 
-    // Helper function to format time
     const formatTime = (timeString) => {
       if (!timeString) return "Time TBA";
       try {
@@ -188,36 +160,52 @@ const generateOrderTicketPDF = async (order, event) => {
       }
     };
 
-    // Section: Event Information
-    currentY = addSectionHeader("EVENT INFORMATION", currentY);
-    currentY = addContentText(
+    // ----- LEFT COLUMN CONTENT -----
+
+    // Event Information Section
+    doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
+    doc.text("EVENT INFORMATION", leftColX, currentY);
+    currentY += lineHeight + 5;
+
+    doc.fillColor("#2d3748").fontSize(11).font("Helvetica");
+    doc.text(
       `Date: ${formatDate(event?.date || order?.createdAt)}`,
+      leftColX,
       currentY
     );
-    currentY = addContentText(
-      `Time: ${formatTime(event?.time || "19:00")}`,
-      currentY
-    );
-    currentY = addContentText(
+    currentY += 16;
+    doc.text(`Time: ${formatTime(event?.time || "19:00")}`, leftColX, currentY);
+    currentY += 16;
+    doc.text(
       `Location: ${event?.location || "Location TBA"}`,
+      leftColX,
       currentY
     );
     currentY += sectionGap;
 
-    // Section: Ticket Holder Information
-    currentY = addSectionHeader("TICKET HOLDER", currentY);
-    currentY = addContentText(
+    // Ticket Holder Section
+    doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
+    doc.text("TICKET HOLDER", leftColX, currentY);
+    currentY += lineHeight + 5;
+
+    doc.fillColor("#2d3748").fontSize(11).font("Helvetica");
+    doc.text(
       `Name: ${order?.buyerId?.name || "Guest User"}`,
+      leftColX,
       currentY
     );
-    currentY = addContentText(
+    currentY += 16;
+    doc.text(
       `Email: ${order?.buyerId?.email || "No email provided"}`,
+      leftColX,
       currentY
     );
     currentY += sectionGap;
 
-    // Section: Seat Information
-    currentY = addSectionHeader("SEAT ASSIGNMENT", currentY);
+    // Seat Assignment Section
+    doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
+    doc.text("SEAT ASSIGNMENT", leftColX, currentY);
+    currentY += lineHeight + 5;
 
     const seat = order?.seats?.[0] || {};
     const row = typeof seat === "object" ? seat?.row || "A" : "A";
@@ -230,213 +218,161 @@ const generateOrderTicketPDF = async (order, event) => {
         ? `${seatSection} ${row}${seatNumber}`
         : "General Admission";
 
-    currentY = addContentText(`Seat: ${seatInfo}`, currentY);
+    doc.fillColor("#2d3748").fontSize(11).font("Helvetica");
+    doc.text(`Seat: ${seatInfo}`, leftColX, currentY);
+    currentY += 16;
 
     if (seat?.section && seat?.row && seatNumber) {
-      currentY = addContentText(`Section: ${seatSection}`, currentY);
-      currentY = addContentText(`Row: ${row}`, currentY);
-      currentY = addContentText(`Seat Number: ${seatNumber}`, currentY);
+      doc.text(`Section: ${seatSection}`, leftColX, currentY);
+      currentY += 16;
+      doc.text(`Row: ${row}`, leftColX, currentY);
+      currentY += 16;
+      doc.text(`Seat Number: ${seatNumber}`, leftColX, currentY);
+      currentY += 16;
     }
     currentY += sectionGap;
 
-    // Section: Order Information
-    currentY = addSectionHeader("ORDER DETAILS", currentY);
+    // Order Details Section
+    doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
+    doc.text("ORDER DETAILS", leftColX, currentY);
+    currentY += lineHeight + 5;
+
+    doc.fillColor("#2d3748").fontSize(11).font("Helvetica");
     const orderIdDisplay = (order?._id?.toString() || "N/A").substring(0, 20);
-    currentY = addContentText(`Order ID: ${orderIdDisplay}`, currentY);
+    doc.text(`Order ID: ${orderIdDisplay}`, leftColX, currentY);
+    currentY += 16;
 
     if (order?.bookingId) {
       const bookingIdDisplay = order.bookingId.toString().substring(0, 20);
-      currentY = addContentText(`Booking ID: ${bookingIdDisplay}`, currentY);
+      doc.text(`Booking ID: ${bookingIdDisplay}`, leftColX, currentY);
+      currentY += 16;
     }
 
     const purchaseDate = new Date(order?.createdAt || Date.now());
-    currentY = addContentText(
+    doc.text(
       `Purchased: ${purchaseDate.toLocaleDateString()}`,
+      leftColX,
       currentY
     );
 
-    // ----- RIGHT COLUMN: PRICING & VALIDATION -----
+    // ----- RIGHT COLUMN CONTENT -----
 
-    // Right column border (subtle separator)
-    doc.strokeColor(colors.border[0], colors.border[1], colors.border[2]);
-    doc.lineWidth(0.5);
+    // Column separator line
+    doc.strokeColor("#e5e7eb").lineWidth(1);
     doc
-      .moveTo(rightColStart - 5, contentY - 10)
-      .lineTo(rightColStart - 5, contentY + 120)
+      .moveTo(rightColX - 20, contentY - 20)
+      .lineTo(rightColX - 20, contentY + 350)
       .stroke();
 
     let rightY = contentY;
 
-    // Price section
-    rightY = addSectionHeader("PAYMENT", rightY) - 8;
-    doc.text("", rightColStart, rightY); // Reset position
-    rightY += 12;
+    // Payment Section
+    doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
+    doc.text("PAYMENT", rightColX, rightY);
+    rightY += 24;
 
-    // Total price - larger and prominent
-    doc.fontSize(24).font("Helvetica-Bold");
-    const isValidTicket = !order?.cancelled;
-    if (isValidTicket) {
-      doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    } else {
-      doc.fillColor(colors.danger[0], colors.danger[1], colors.danger[2]);
-    }
-
+    // Price display
+    doc.fillColor(order?.cancelled ? "#ef4444" : "#6c757d");
+    doc.fontSize(28).font("Helvetica-Bold");
     const totalPrice = (order?.totalAmount || 0).toFixed(2);
-    doc.text(`$${totalPrice}`, rightColStart, rightY);
-    rightY += 20;
+    doc.text(`$${totalPrice}`, rightColX, rightY);
+    rightY += 45;
 
-    // Validation section
-    doc.fillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
-    doc.fontSize(12).font("Helvetica-Bold");
-    doc.text("VALIDATION", rightColStart, rightY);
-    rightY += 10;
+    // Validation Section
+    doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
+    doc.text("VALIDATION", rightColX, rightY);
+    rightY += 18;
 
     // Barcode label
-    doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    doc.fontSize(9).font("Helvetica-Bold");
-    doc.text("BARCODE", rightColStart, rightY);
-    rightY += 8;
+    doc.fillColor("#6c757d").fontSize(10).font("Helvetica-Bold");
+    doc.text("BARCODE", rightColX, rightY);
+    rightY += 18;
 
-    // Barcode implementation
+    // Barcode area
+    const barcodeWidth = 150;
+    const barcodeHeight = 50;
+
+    // Barcode background
+    doc.fillColor("#fafafa");
+    doc.rect(rightColX, rightY, barcodeWidth, barcodeHeight).fill();
+
+    // Border around barcode
+    doc.strokeColor("#e5e7eb").lineWidth(1);
+    doc.rect(rightColX, rightY, barcodeWidth, barcodeHeight).stroke();
+
     if (barcodeBuffer) {
       try {
-        // Create barcode background
-        doc.fillColor(250, 250, 250);
-        const barcodeHeight = 25;
-        doc
-          .rect(rightColStart, rightY, rightColWidth - 5, barcodeHeight)
-          .fill();
-
-        // Add the actual barcode image
-        doc.image(barcodeBuffer, rightColStart + 2, rightY + 2, {
-          width: rightColWidth - 10,
-          height: barcodeHeight - 4,
+        doc.image(barcodeBuffer, rightColX + 10, rightY + 8, {
+          width: barcodeWidth - 20,
+          height: barcodeHeight - 16,
         });
-        rightY += barcodeHeight + 3;
       } catch (imgError) {
         console.error("Error adding barcode image:", imgError);
-        // Fallback to text barcode
-        doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-        doc.font("Courier").fontSize(10);
-        doc.text(order?.ticketCode || "000000000000", rightColStart, rightY);
-        rightY += 15;
+        doc.fillColor("#2d3748").fontSize(10).font("Courier");
+        doc.text(
+          order?.ticketCode || "000000000000",
+          rightColX + 20,
+          rightY + 22
+        );
       }
     } else {
-      // Generate realistic barcode pattern (same as frontend)
+      // Manual barcode pattern
       const barcodeId = order?.ticketCode || "000000000000";
+      doc.fillColor("#2d3748");
 
-      // Create barcode background
-      doc.fillColor(250, 250, 250);
-      const barcodeHeight = 25;
-      doc.rect(rightColStart, rightY, rightColWidth - 5, barcodeHeight).fill();
+      let barX = rightColX + 20;
+      const barWidth = 2.5;
+      const barHeight = barcodeHeight - 20;
+      const barY = rightY + 10;
 
-      // Generate barcode pattern (matching frontend logic exactly)
-      const generateRealisticBarcode = (data) => {
-        const bars = [];
+      for (
+        let i = 0;
+        i < barcodeId.length && barX < rightColX + barcodeWidth - 20;
+        i++
+      ) {
+        const digit = parseInt(barcodeId[i]) || 0;
+        const pattern = digit % 4;
 
-        // Start pattern for Code 128
-        bars.push({ type: "bar", width: 2 });
-        bars.push({ type: "space", width: 1 });
-        bars.push({ type: "bar", width: 1 });
-        bars.push({ type: "space", width: 1 });
-        bars.push({ type: "bar", width: 1 });
-        bars.push({ type: "space", width: 1 });
-
-        // Data pattern based on barcode ID
-        for (let i = 0; i < data.length; i++) {
-          const digit = parseInt(data[i]) || 0;
-
-          switch (digit % 4) {
-            case 0:
-              bars.push({ type: "bar", width: 1 });
-              bars.push({ type: "space", width: 1 });
-              bars.push({ type: "bar", width: 3 });
-              bars.push({ type: "space", width: 2 });
-              break;
-            case 1:
-              bars.push({ type: "bar", width: 2 });
-              bars.push({ type: "space", width: 1 });
-              bars.push({ type: "bar", width: 1 });
-              bars.push({ type: "space", width: 3 });
-              break;
-            case 2:
-              bars.push({ type: "bar", width: 1 });
-              bars.push({ type: "space", width: 2 });
-              bars.push({ type: "bar", width: 2 });
-              bars.push({ type: "space", width: 1 });
-              break;
-            case 3:
-              bars.push({ type: "bar", width: 3 });
-              bars.push({ type: "space", width: 1 });
-              bars.push({ type: "bar", width: 1 });
-              bars.push({ type: "space", width: 2 });
-              break;
+        for (let j = 0; j < 3; j++) {
+          if ((pattern + j) % 2 === 0) {
+            doc.rect(barX, barY, barWidth, barHeight).fill();
           }
+          barX += barWidth + 1;
         }
-
-        // End pattern
-        bars.push({ type: "bar", width: 2 });
-        bars.push({ type: "space", width: 1 });
-        bars.push({ type: "bar", width: 1 });
-        bars.push({ type: "space", width: 1 });
-        bars.push({ type: "bar", width: 1 });
-        bars.push({ type: "space", width: 1 });
-        bars.push({ type: "bar", width: 2 });
-
-        return bars;
-      };
-
-      const barPattern = generateRealisticBarcode(barcodeId);
-      doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-
-      let barX = rightColStart + 2;
-      const totalBars = barPattern.length;
-      const availableWidth = rightColWidth - 10;
-      const barSpacing = availableWidth / totalBars;
-
-      // Draw each bar
-      barPattern.forEach((element) => {
-        if (element.type === "bar") {
-          const barWidth = element.width * 0.8;
-          const barHeight = barcodeHeight * 0.8;
-          const barY = rightY + (barcodeHeight - barHeight) / 2;
-          doc.rect(barX, barY, barWidth, barHeight).fill();
-        }
-        barX += barSpacing;
-      });
-
-      rightY += barcodeHeight + 3;
+        barX += 2.5;
+      }
     }
 
-    // Barcode number
-    doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-    doc.fontSize(8).font("Helvetica");
+    rightY += barcodeHeight + 10;
+
+    // Barcode text
+    doc.fillColor("#2d3748").fontSize(9).font("Helvetica");
     const barcodeText = order?.ticketCode || "000000000000";
-    doc.text(barcodeText, rightColStart + (rightColWidth - 5) / 2, rightY, {
+    const textX = rightColX + barcodeWidth / 2;
+    doc.text(barcodeText, textX - 40, rightY, {
+      width: 80,
       align: "center",
-      width: 0,
     });
 
-    // ----- FOOTER SECTION (ENHANCED) -----
-
-    const footerY = margin + 220; // Match frontend positioning
-    const footerHeight = 35;
+    // ----- FOOTER -----
+    const footerY = margin + ticketHeight - 100; // MORE SPACE FOR FOOTER
+    const footerHeight = 100;
 
     // Footer background
-    doc.fillColor(colors.light[0], colors.light[1], colors.light[2]);
+    doc.fillColor("#f7fafc");
     doc.rect(margin, footerY, contentWidth, footerHeight).fill();
 
-    // Footer border
-    doc.strokeColor(colors.border[0], colors.border[1], colors.border[2]);
+    // Footer top border
+    doc.strokeColor("#e5e7eb").lineWidth(1);
     doc
       .moveTo(margin, footerY)
       .lineTo(margin + contentWidth, footerY)
       .stroke();
 
-    // Terms and conditions
-    doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-    doc.fontSize(8).font("Helvetica");
+    // Footer text
+    doc.fillColor("#2d3748").fontSize(9).font("Helvetica");
 
+    const isValidTicket = !order?.cancelled;
     const footerText1 =
       "This ticket is valid for entry to the specified event.";
     const footerText2 = isValidTicket
@@ -444,28 +380,31 @@ const generateOrderTicketPDF = async (order, event) => {
       : "This ticket has been cancelled. Entry will be denied.";
     const footerText3 = "For support, contact: info@eventsntickets.com.au";
 
-    doc.text(footerText1, margin + contentWidth / 2, footerY + 8, {
+    const footerCenterX = margin + contentWidth / 2;
+
+    doc.text(footerText1, footerCenterX - 200, footerY + 20, {
+      width: 400,
       align: "center",
-      width: 0,
     });
-    doc.text(footerText2, margin + contentWidth / 2, footerY + 16, {
+    doc.text(footerText2, footerCenterX - 200, footerY + 38, {
+      width: 400,
       align: "center",
-      width: 0,
     });
-    doc.text(footerText3, margin + contentWidth / 2, footerY + 24, {
+    doc.text(footerText3, footerCenterX - 200, footerY + 56, {
+      width: 400,
       align: "center",
-      width: 0,
     });
 
-    // Watermark for cancelled tickets
+    // Cancelled watermark
     if (order?.cancelled) {
-      doc.fontSize(60).font("Helvetica-Bold");
-      doc.fillColor(colors.danger[0], colors.danger[1], colors.danger[2]);
-      doc.opacity(0.15);
-      doc.text("CANCELLED", pageWidth / 2, pageHeight / 2, {
+      doc.fontSize(70).font("Helvetica-Bold");
+      doc.fillColor("#ef4444");
+      doc.opacity(0.2);
+      const watermarkX = pageWidth / 2;
+      const watermarkY = pageHeight / 2;
+      doc.text("CANCELLED", watermarkX - 120, watermarkY - 35, {
+        width: 240,
         align: "center",
-        baseline: "middle",
-        width: 0,
       });
       doc.opacity(1);
     }

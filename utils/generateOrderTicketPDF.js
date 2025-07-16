@@ -5,13 +5,12 @@ const generateOrderTicketPDF = async (order, event) => {
   let barcodeBuffer;
 
   try {
-    // Generate realistic Code 128 barcode using the same ticketCode as frontend
     barcodeBuffer = await bwipjs.toBuffer({
       bcid: "code128",
       text: order.ticketCode || "000000000000",
-      scale: 3,
-      height: 15,
-      includetext: false, // We'll add text manually for consistency
+      scale: 2,
+      height: 10,
+      includetext: true,
       textxalign: "center",
     });
   } catch (err) {
@@ -20,10 +19,7 @@ const generateOrderTicketPDF = async (order, event) => {
   }
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
-      margin: 0,
-      size: "A4",
-    });
+    const doc = new PDFDocument({ margin: 0 });
     const buffers = [];
 
     doc.on("data", buffers.push.bind(buffers));
@@ -31,15 +27,16 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.on("error", reject);
 
     // ========================
-    // EXACT MATCHING DESIGN
+    // PDF Layout and Design - ENHANCED TO MATCH FRONTEND
     // ========================
 
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
-    const margin = 15;
+    const margin = 15; // Reduced margin like frontend
     const contentWidth = pageWidth - margin * 2;
+    const contentHeight = pageHeight - margin * 2;
 
-    // Color palette (RGB values for PDFKit) - EXACT MATCH
+    // Color palette (matching frontend exactly)
     const colors = {
       primary: [108, 117, 125], // Gray for header background
       secondary: [73, 80, 87], // Darker gray
@@ -52,62 +49,53 @@ const generateOrderTicketPDF = async (order, event) => {
       accent: [224, 88, 41], // Orange for accents
     };
 
-    // Helper function to set fill color from RGB array
-    const setFillColor = (colorArray) => {
-      doc.fillColor(
-        `rgb(${colorArray[0]}, ${colorArray[1]}, ${colorArray[2]})`
-      );
-    };
-
-    const setStrokeColor = (colorArray) => {
-      doc.strokeColor(
-        `rgb(${colorArray[0]}, ${colorArray[1]}, ${colorArray[2]})`
-      );
-    };
-
-    // ----- MAIN TICKET CONTAINER -----
+    // ----- BACKGROUND AND MAIN CONTAINER -----
 
     // Background with subtle gradient effect
-    setFillColor(colors.light);
+    doc.fillColor(colors.light[0], colors.light[1], colors.light[2]);
     doc.rect(0, 0, pageWidth, pageHeight).fill();
 
-    // Main ticket card
-    setFillColor(colors.white);
+    // Main ticket card (height increased to 240 like frontend)
+    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
     doc.roundedRect(margin, margin, contentWidth, 240, 5).fill();
 
     // Card border
-    setStrokeColor(colors.border);
+    doc.strokeColor(colors.border[0], colors.border[1], colors.border[2]);
     doc.lineWidth(1);
     doc.roundedRect(margin, margin, contentWidth, 240, 5).stroke();
 
-    // ----- HEADER SECTION -----
+    // ----- HEADER SECTION (ENHANCED) -----
 
-    // Main header background
-    setFillColor(colors.primary);
+    // Main header background (35px height like frontend)
+    doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
     doc.roundedRect(margin, margin, contentWidth, 35, 5).fill();
 
     // Header bottom rectangle to square off bottom corners
     doc.rect(margin, margin + 30, contentWidth, 5).fill();
 
-    // Logo placeholder (you can replace with actual logo)
-    setFillColor(colors.white);
-    doc.circle(margin + 20, margin + 17.5, 12).fill();
-    setFillColor(colors.primary);
-    doc.fontSize(10).font("Helvetica-Bold");
-    doc.text("LOGO", margin + 20, margin + 20, { align: "center" });
+    // Logo placeholder (enhanced)
+    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
+    doc.roundedRect(margin + 8, margin + 5, 24, 24, 3).fill();
+    doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    doc.fontSize(8).font("Helvetica-Bold");
+    doc.text("LOGO", margin + 20, margin + 14, { align: "center", width: 0 });
 
-    // Event name in header
-    const title = event?.title || order.eventTitle || "Event";
-    let displayTitle =
-      title.length > 40 ? title.substring(0, 37) + "..." : title;
+    // Event title in header (enhanced)
+    const eventTitle = event?.title || "Event";
+    const displayTitle =
+      eventTitle.length > 40 ? eventTitle.slice(0, 37) + "..." : eventTitle;
 
-    setFillColor(colors.white);
-    doc.fontSize(14).font("Helvetica-Bold");
+    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
+    doc.font("Helvetica-Bold").fontSize(14);
     doc.text(displayTitle, margin + 40, margin + 18);
 
-    // Single ticket badge
-    setFillColor(colors.secondary);
+    // Single ticket badge (enhanced positioning)
     const badgeWidth = 30;
+    doc.fillColor(
+      colors.secondary[0],
+      colors.secondary[1],
+      colors.secondary[2]
+    );
     doc
       .roundedRect(
         margin + contentWidth - badgeWidth - 5,
@@ -118,16 +106,14 @@ const generateOrderTicketPDF = async (order, event) => {
       )
       .fill();
 
-    setFillColor(colors.white);
-    doc.fontSize(8).font("Helvetica-Bold");
-    doc.text(
-      "1 TICKET",
-      margin + contentWidth - badgeWidth / 2 - 5,
-      margin + 20,
-      { align: "center" }
-    );
+    doc.fillColor(colors.white[0], colors.white[1], colors.white[2]);
+    doc.font("Helvetica-Bold").fontSize(8);
+    doc.text("1 TICKET", margin + contentWidth - badgeWidth + 15, margin + 15, {
+      align: "center",
+      width: 0,
+    });
 
-    // ----- MAIN CONTENT AREA -----
+    // ----- MAIN CONTENT AREA (REDESIGNED TO MATCH FRONTEND) -----
 
     const contentY = margin + 50; // Start content right after header
     const leftColWidth = contentWidth * 0.55;
@@ -137,116 +123,142 @@ const generateOrderTicketPDF = async (order, event) => {
     // ----- LEFT COLUMN: EVENT & TICKET DETAILS -----
 
     let currentY = contentY;
+    const lineHeight = 6;
+    const sectionGap = 12;
+
+    // Helper function to add section headers
+    const addSectionHeader = (title, y) => {
+      doc.fillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
+      doc.fontSize(12).font("Helvetica-Bold");
+      doc.text(title, margin + 5, y);
+      return y + 8;
+    };
+
+    // Helper function to add content text
+    const addContentText = (text, y, indent = 5) => {
+      doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+      doc.fontSize(10).font("Helvetica");
+      doc.text(text, margin + indent, y);
+      return y + lineHeight;
+    };
+
+    // Helper function to format date
+    const formatDate = (dateString) => {
+      if (!dateString) return "Date TBA";
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch (e) {
+        return dateString;
+      }
+    };
+
+    // Helper function to format time
+    const formatTime = (timeString) => {
+      if (!timeString) return "Time TBA";
+      try {
+        let date;
+        if (timeString.includes("T") || timeString.includes(" ")) {
+          date = new Date(timeString);
+        } else {
+          const timeRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+          const match = timeString.match(timeRegex);
+          if (match) {
+            const hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            date = new Date();
+            date.setHours(hours, minutes, 0, 0);
+          } else {
+            date = new Date(timeString);
+          }
+        }
+        if (isNaN(date.getTime())) return timeString;
+        return date.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } catch (e) {
+        return timeString;
+      }
+    };
 
     // Section: Event Information
-    doc.fontSize(12).font("Helvetica-Bold");
-    setFillColor(colors.accent);
-    doc.text("EVENT INFORMATION", margin + 5, currentY);
-    currentY += 8;
-
-    // Date & Time
-    doc.fontSize(10).font("Helvetica");
-    setFillColor(colors.dark);
-
-    const eventDate = formatDate(event?.date || order.createdAt);
-    const eventTime = formatTime(event?.time || "19:00");
-
-    doc.text(`Date: ${eventDate}`, margin + 5, currentY);
-    currentY += 6;
-    doc.text(`Time: ${eventTime}`, margin + 5, currentY);
-    currentY += 6;
-    doc.text(
-      `Location: ${event?.location || "Location TBA"}`,
-      margin + 5,
+    currentY = addSectionHeader("EVENT INFORMATION", currentY);
+    currentY = addContentText(
+      `Date: ${formatDate(event?.date || order?.createdAt)}`,
       currentY
     );
-    currentY += 12;
+    currentY = addContentText(
+      `Time: ${formatTime(event?.time || "19:00")}`,
+      currentY
+    );
+    currentY = addContentText(
+      `Location: ${event?.location || "Location TBA"}`,
+      currentY
+    );
+    currentY += sectionGap;
 
     // Section: Ticket Holder Information
-    doc.font("Helvetica-Bold");
-    setFillColor(colors.accent);
-    doc.text("TICKET HOLDER", margin + 5, currentY);
-    currentY += 8;
-
-    doc.font("Helvetica");
-    setFillColor(colors.dark);
-    doc.text(
-      `Name: ${order.buyerId?.name || "Guest User"}`,
-      margin + 5,
+    currentY = addSectionHeader("TICKET HOLDER", currentY);
+    currentY = addContentText(
+      `Name: ${order?.buyerId?.name || "Guest User"}`,
       currentY
     );
-    currentY += 6;
-    doc.text(
-      `Email: ${order.buyerId?.email || "No email provided"}`,
-      margin + 5,
+    currentY = addContentText(
+      `Email: ${order?.buyerId?.email || "No email provided"}`,
       currentY
     );
-    currentY += 12;
+    currentY += sectionGap;
 
     // Section: Seat Information
-    doc.font("Helvetica-Bold");
-    setFillColor(colors.accent);
-    doc.text("SEAT ASSIGNMENT", margin + 5, currentY);
-    currentY += 8;
+    currentY = addSectionHeader("SEAT ASSIGNMENT", currentY);
 
-    doc.font("Helvetica");
-    setFillColor(colors.dark);
+    const seat = order?.seats?.[0] || {};
+    const row = typeof seat === "object" ? seat?.row || "A" : "A";
+    const seatNumber =
+      typeof seat === "object" ? seat?.seatNumber || seat?.number || "1" : "1";
+    const seatSection = seat?.section || event?.zone || "GA";
 
-    const seat = order.seats?.[0] || {};
-    const seatInfo = seat
-      ? `${seat.section || "GA"} ${seat.row || ""}${
-          seat.seatNumber || seat.number || ""
-        }`
-      : "General Admission";
-    doc.text(`Seat: ${seatInfo}`, margin + 5, currentY);
-    currentY += 6;
+    const seatInfo =
+      seat?.section && seat?.row && seatNumber
+        ? `${seatSection} ${row}${seatNumber}`
+        : "General Admission";
 
-    if (seat?.section && seat?.row && (seat?.seatNumber || seat?.number)) {
-      doc.text(`Section: ${seat.section}`, margin + 5, currentY);
-      currentY += 6;
-      doc.text(`Row: ${seat.row}`, margin + 5, currentY);
-      currentY += 6;
-      doc.text(
-        `Seat Number: ${seat.seatNumber || seat.number}`,
-        margin + 5,
-        currentY
-      );
-      currentY += 6;
+    currentY = addContentText(`Seat: ${seatInfo}`, currentY);
+
+    if (seat?.section && seat?.row && seatNumber) {
+      currentY = addContentText(`Section: ${seatSection}`, currentY);
+      currentY = addContentText(`Row: ${row}`, currentY);
+      currentY = addContentText(`Seat Number: ${seatNumber}`, currentY);
     }
-    currentY += 6;
+    currentY += sectionGap;
 
     // Section: Order Information
-    doc.font("Helvetica-Bold");
-    setFillColor(colors.accent);
-    doc.text("ORDER DETAILS", margin + 5, currentY);
-    currentY += 8;
+    currentY = addSectionHeader("ORDER DETAILS", currentY);
+    const orderIdDisplay = (order?._id?.toString() || "N/A").substring(0, 20);
+    currentY = addContentText(`Order ID: ${orderIdDisplay}`, currentY);
 
-    doc.font("Helvetica");
-    setFillColor(colors.dark);
-    const orderIdDisplay = (order._id || "N/A").toString().substring(0, 20);
-    doc.text(`Order ID: ${orderIdDisplay}`, margin + 5, currentY);
-    currentY += 6;
-
-    if (order.bookingId) {
-      doc.text(
-        `Booking ID: ${order.bookingId.toString().substring(0, 20)}`,
-        margin + 5,
-        currentY
-      );
-      currentY += 6;
+    if (order?.bookingId) {
+      const bookingIdDisplay = order.bookingId.toString().substring(0, 20);
+      currentY = addContentText(`Booking ID: ${bookingIdDisplay}`, currentY);
     }
 
-    const purchaseDate = new Date(order.createdAt || Date.now());
-    doc.text(
+    const purchaseDate = new Date(order?.createdAt || Date.now());
+    currentY = addContentText(
       `Purchased: ${purchaseDate.toLocaleDateString()}`,
-      margin + 5,
       currentY
     );
 
     // ----- RIGHT COLUMN: PRICING & VALIDATION -----
 
-    // Right column border
-    setStrokeColor(colors.border);
+    // Right column border (subtle separator)
+    doc.strokeColor(colors.border[0], colors.border[1], colors.border[2]);
     doc.lineWidth(0.5);
     doc
       .moveTo(rightColStart - 5, contentY - 10)
@@ -256,52 +268,73 @@ const generateOrderTicketPDF = async (order, event) => {
     let rightY = contentY;
 
     // Price section
-    doc.fontSize(12).font("Helvetica-Bold");
-    setFillColor(colors.accent);
-    doc.text("PAYMENT", rightColStart, rightY);
+    rightY = addSectionHeader("PAYMENT", rightY) - 8;
+    doc.text("", rightColStart, rightY); // Reset position
     rightY += 12;
 
     // Total price - larger and prominent
     doc.fontSize(24).font("Helvetica-Bold");
-    const isValidTicket = !order.cancelled;
-    setFillColor(isValidTicket ? colors.primary : colors.danger);
-    const totalPrice = (order.totalAmount || 0).toFixed(2);
-    doc.text(`$${totalPrice}`, rightColStart, rightY);
-    rightY += 15;
+    const isValidTicket = !order?.cancelled;
+    if (isValidTicket) {
+      doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    } else {
+      doc.fillColor(colors.danger[0], colors.danger[1], colors.danger[2]);
+    }
 
-    // Enhanced Barcode section
+    const totalPrice = (order?.totalAmount || 0).toFixed(2);
+    doc.text(`$${totalPrice}`, rightColStart, rightY);
+    rightY += 20;
+
+    // Validation section
+    doc.fillColor(colors.accent[0], colors.accent[1], colors.accent[2]);
     doc.fontSize(12).font("Helvetica-Bold");
-    setFillColor(colors.accent);
     doc.text("VALIDATION", rightColStart, rightY);
     rightY += 10;
 
-    // Use the SAME ticketCode from backend
-    const barcodeId = order.ticketCode || "000000000000";
-
-    // Barcode
+    // Barcode label
+    doc.fillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
     doc.fontSize(9).font("Helvetica-Bold");
-    setFillColor(colors.primary);
     doc.text("BARCODE", rightColStart, rightY);
     rightY += 8;
 
-    // Create barcode background
-    doc.fillColor(250, 250, 250);
-    const barcodeHeight = 25;
-    doc.rect(rightColStart, rightY, rightColWidth - 5, barcodeHeight).fill();
-
-    // If we have a barcode buffer, use it
+    // Barcode implementation
     if (barcodeBuffer) {
-      const barcodeWidth = Math.min(rightColWidth - 10, 120);
-      doc.image(barcodeBuffer, rightColStart + 2, rightY + 2, {
-        width: barcodeWidth,
-        height: barcodeHeight - 4,
-      });
+      try {
+        // Create barcode background
+        doc.fillColor(250, 250, 250);
+        const barcodeHeight = 25;
+        doc
+          .rect(rightColStart, rightY, rightColWidth - 5, barcodeHeight)
+          .fill();
+
+        // Add the actual barcode image
+        doc.image(barcodeBuffer, rightColStart + 2, rightY + 2, {
+          width: rightColWidth - 10,
+          height: barcodeHeight - 4,
+        });
+        rightY += barcodeHeight + 3;
+      } catch (imgError) {
+        console.error("Error adding barcode image:", imgError);
+        // Fallback to text barcode
+        doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+        doc.font("Courier").fontSize(10);
+        doc.text(order?.ticketCode || "000000000000", rightColStart, rightY);
+        rightY += 15;
+      }
     } else {
-      // Fallback: Generate IDENTICAL barcode pattern as React component
-      const generateRealisticBarcodePDF = (data) => {
+      // Generate realistic barcode pattern (same as frontend)
+      const barcodeId = order?.ticketCode || "000000000000";
+
+      // Create barcode background
+      doc.fillColor(250, 250, 250);
+      const barcodeHeight = 25;
+      doc.rect(rightColStart, rightY, rightColWidth - 5, barcodeHeight).fill();
+
+      // Generate barcode pattern (matching frontend logic exactly)
+      const generateRealisticBarcode = (data) => {
         const bars = [];
 
-        // Start pattern for Code 128 (same as display)
+        // Start pattern for Code 128
         bars.push({ type: "bar", width: 2 });
         bars.push({ type: "space", width: 1 });
         bars.push({ type: "bar", width: 1 });
@@ -309,11 +342,10 @@ const generateOrderTicketPDF = async (order, event) => {
         bars.push({ type: "bar", width: 1 });
         bars.push({ type: "space", width: 1 });
 
-        // Data pattern based on barcode ID (IDENTICAL to display)
+        // Data pattern based on barcode ID
         for (let i = 0; i < data.length; i++) {
           const digit = parseInt(data[i]) || 0;
 
-          // Create realistic barcode pattern based on digit value (SAME LOGIC)
           switch (digit % 4) {
             case 0:
               bars.push({ type: "bar", width: 1 });
@@ -342,7 +374,7 @@ const generateOrderTicketPDF = async (order, event) => {
           }
         }
 
-        // End pattern for Code 128 (same as display)
+        // End pattern
         bars.push({ type: "bar", width: 2 });
         bars.push({ type: "space", width: 1 });
         bars.push({ type: "bar", width: 1 });
@@ -354,52 +386,56 @@ const generateOrderTicketPDF = async (order, event) => {
         return bars;
       };
 
-      const barPattern = generateRealisticBarcodePDF(barcodeId);
-      setFillColor(colors.dark);
+      const barPattern = generateRealisticBarcode(barcodeId);
+      doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
 
       let barX = rightColStart + 2;
-      const barSpacing = (rightColWidth - 10) / barPattern.length;
+      const totalBars = barPattern.length;
+      const availableWidth = rightColWidth - 10;
+      const barSpacing = availableWidth / totalBars;
 
-      // Draw each bar with exact same pattern as display
-      barPattern.forEach((element, i) => {
+      // Draw each bar
+      barPattern.forEach((element) => {
         if (element.type === "bar") {
-          const barWidth = element.width * 0.8; // Scale for PDF
+          const barWidth = element.width * 0.8;
           const barHeight = barcodeHeight * 0.8;
           const barY = rightY + (barcodeHeight - barHeight) / 2;
-
           doc.rect(barX, barY, barWidth, barHeight).fill();
         }
         barX += barSpacing;
       });
+
+      rightY += barcodeHeight + 3;
     }
 
-    rightY += barcodeHeight + 5;
-
-    // Barcode number - Use backend ticketCode
+    // Barcode number
+    doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     doc.fontSize(8).font("Helvetica");
-    setFillColor(colors.dark);
-    doc.text(barcodeId, rightColStart + (rightColWidth - 5) / 2, rightY, {
+    const barcodeText = order?.ticketCode || "000000000000";
+    doc.text(barcodeText, rightColStart + (rightColWidth - 5) / 2, rightY, {
       align: "center",
+      width: 0,
     });
 
-    // ----- FOOTER SECTION -----
+    // ----- FOOTER SECTION (ENHANCED) -----
 
-    const footerY = margin + 220;
+    const footerY = margin + 220; // Match frontend positioning
+    const footerHeight = 35;
 
     // Footer background
-    setFillColor(colors.light);
-    doc.rect(margin, footerY, contentWidth, 35).fill();
+    doc.fillColor(colors.light[0], colors.light[1], colors.light[2]);
+    doc.rect(margin, footerY, contentWidth, footerHeight).fill();
 
     // Footer border
-    setStrokeColor(colors.border);
+    doc.strokeColor(colors.border[0], colors.border[1], colors.border[2]);
     doc
       .moveTo(margin, footerY)
       .lineTo(margin + contentWidth, footerY)
       .stroke();
 
     // Terms and conditions
+    doc.fillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     doc.fontSize(8).font("Helvetica");
-    setFillColor(colors.dark);
 
     const footerText1 =
       "This ticket is valid for entry to the specified event.";
@@ -410,80 +446,32 @@ const generateOrderTicketPDF = async (order, event) => {
 
     doc.text(footerText1, margin + contentWidth / 2, footerY + 8, {
       align: "center",
+      width: 0,
     });
     doc.text(footerText2, margin + contentWidth / 2, footerY + 16, {
       align: "center",
+      width: 0,
     });
     doc.text(footerText3, margin + contentWidth / 2, footerY + 24, {
       align: "center",
+      width: 0,
     });
 
     // Watermark for cancelled tickets
-    if (order.cancelled) {
+    if (order?.cancelled) {
       doc.fontSize(60).font("Helvetica-Bold");
-      doc.fillColor(220, 38, 38).opacity(0.3);
-      doc.text("CANCELLED", pageWidth / 2, pageHeight / 2, { align: "center" });
+      doc.fillColor(colors.danger[0], colors.danger[1], colors.danger[2]);
+      doc.opacity(0.15);
+      doc.text("CANCELLED", pageWidth / 2, pageHeight / 2, {
+        align: "center",
+        baseline: "middle",
+        width: 0,
+      });
       doc.opacity(1);
     }
 
     doc.end();
   });
-
-  // Helper functions
-  function formatDate(dateString) {
-    if (!dateString) return "Date TBA";
-
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    } catch (e) {
-      return dateString;
-    }
-  }
-
-  function formatTime(timeString) {
-    if (!timeString) return "Time TBA";
-
-    try {
-      let date;
-
-      // If it's a full datetime string
-      if (timeString.includes("T") || timeString.includes(" ")) {
-        date = new Date(timeString);
-      } else {
-        // If it's just a time string (HH:MM format)
-        const timeRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
-        const match = timeString.match(timeRegex);
-
-        if (match) {
-          const hours = parseInt(match[1]);
-          const minutes = parseInt(match[2]);
-          date = new Date();
-          date.setHours(hours, minutes, 0, 0);
-        } else {
-          date = new Date(timeString);
-        }
-      }
-
-      if (isNaN(date.getTime())) {
-        return timeString;
-      }
-
-      return date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    } catch (e) {
-      console.error("Error formatting time:", e);
-      return timeString;
-    }
-  }
 };
 
 export default generateOrderTicketPDF;

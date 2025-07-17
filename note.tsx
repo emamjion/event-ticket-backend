@@ -161,9 +161,6 @@ const confirmPayment = async (req, res) => {
 
 */
 
-
-
-
 /* with full email functionality
 
 const confirmPayment = async (req, res) => {
@@ -285,3 +282,6 @@ const confirmPayment = async (req, res) => {
 };
 
 */
+
+// zsb8qR9UsGl9LQz0
+// eventsntickets2017

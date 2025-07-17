@@ -317,10 +317,10 @@ export const generateInvoicePDF = async (order, event, customer) => {
     doc.text("FROM", leftColX, currentY);
     doc.fillColor(colors.black).fontSize(9).font("Helvetica");
     doc.text("EventsNTickets", leftColX, currentY + 12);
-    doc.text("123 Event Street", leftColX, currentY + 24);
-    doc.text("Sydney, NSW 2000", leftColX, currentY + 36);
-    doc.text("Australia", leftColX, currentY + 48);
-    doc.text("ABN: 12 345 678 901", leftColX, currentY + 60);
+    doc.text("38 Liddle Street", leftColX, currentY + 24);
+    doc.text("North St Marys", leftColX, currentY + 36);
+    doc.text("NSW 2760", leftColX, currentY + 48);
+    doc.text("ABN: 48 550 860 418", leftColX, currentY + 60);
 
     // To section (customer info)
     doc.fillColor(colors.orange).fontSize(9).font("Helvetica-Bold");
@@ -441,9 +441,9 @@ export const generateInvoicePDF = async (order, event, customer) => {
       leftColX,
       currentY + 18
     );
-    doc.text("support@eventsntickets.com.au", leftColX, currentY + 28, {
+    doc.text("info@eventsntickets.com.au", leftColX, currentY + 28, {
       underline: true,
-      link: "mailto:support@eventsntickets.com.au",
+      link: "mailto:info@eventsntickets.com.au",
     });
 
     doc.end();

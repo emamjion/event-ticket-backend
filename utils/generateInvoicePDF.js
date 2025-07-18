@@ -75,7 +75,6 @@ export const generateInvoicePDF = async (order, event, customer) => {
     doc.fillColor(colors.white).font("Helvetica-Bold").fontSize(28);
     doc.text("INVOICE", titleX, titleY);
 
-    // Format invoice date safely
     const invoiceDate = order?.date
       ? DateTime.fromJSDate(new Date(order.date))
           .setZone("Australia/Sydney")
@@ -153,29 +152,12 @@ export const generateInvoicePDF = async (order, event, customer) => {
     doc.fillColor(colors.black).font("Helvetica-Bold").fontSize(12);
     doc.text(event.title || "Event Name", leftColX + 12, currentY + 12);
 
-    // ✅ Format event.date safely with timezone
-    let formattedEventDate = "TBD";
-
-    if (event?.date) {
-      let parsedDate;
-      if (event.date instanceof Date) {
-        parsedDate = DateTime.fromJSDate(event.date);
-      } else if (
-        typeof event.date === "string" &&
-        !isNaN(Date.parse(event.date))
-      ) {
-        parsedDate = DateTime.fromISO(event.date);
-      }
-
-      if (parsedDate?.isValid) {
-        formattedEventDate = parsedDate
-          .setZone("Australia/Sydney")
-          .toFormat("dd MMMM yyyy");
-      }
-    }
-
     doc.fillColor(colors.gray).fontSize(9).font("Helvetica");
-    doc.text(`Date: ${formattedEventDate}`, leftColX + 12, currentY + 28);
+
+    // ✅ Static event date/time here
+    const staticEventDate = "6:00pm, Saturday, 1st November 2025";
+    doc.text(`Date: ${staticEventDate}`, leftColX + 12, currentY + 28);
+
     doc.text(
       `Location: ${event.location || "TBD"}`,
       leftColX + 12,

@@ -49,7 +49,7 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.roundedRect(margin, margin, contentWidth, headerHeight, 8).fill();
     doc.rect(margin, margin + headerHeight - 8, contentWidth, 8).fill();
 
-    // Add real logo
+    // Logo
     const logoPath = path.resolve("public/events-logo.png");
     const logoWidth = 60;
     const logoHeight = 60;
@@ -67,17 +67,7 @@ const generateOrderTicketPDF = async (order, event) => {
       }
     }
 
-    // Event title
-    const eventTitle = event?.title || "Event";
-    const displayTitle =
-      eventTitle.length > 25 ? eventTitle.slice(0, 22) + "..." : eventTitle;
-
-    const titleFontSize = 18;
-    const titleX = logoX + logoWidth + 15;
-    const titleY = logoY + (logoHeight - titleFontSize) / 2;
-
-    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(titleFontSize);
-    doc.text(displayTitle, titleX, titleY);
+    // (Removed event title from header)
 
     // Ticket badge
     const badgeWidth = 80;
@@ -143,6 +133,16 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.text("EVENT INFORMATION", leftColX, currentY);
     currentY += lineHeight + 5;
 
+    // Event Title inside EVENT INFORMATION
+    const eventTitle = event?.title || "Event";
+    const displayTitle =
+      eventTitle.length > 40 ? eventTitle.slice(0, 37) + "..." : eventTitle;
+
+    doc.fillColor("#2d3748").fontSize(13).font("Helvetica-Bold");
+    doc.text(`Title: ${displayTitle}`, leftColX, currentY);
+    currentY += 20;
+
+    // Date, Time, Location
     doc.fillColor("#2d3748").fontSize(11).font("Helvetica");
     doc.text(
       `Date: ${formatDate(event?.date || order?.createdAt)}`,
@@ -152,11 +152,16 @@ const generateOrderTicketPDF = async (order, event) => {
     currentY += 16;
     doc.text(`Time: ${formatTime(event?.time || "19:00")}`, leftColX, currentY);
     currentY += 16;
-    doc.text(
-      `Location: ${event?.location || "Location TBA"}`,
-      leftColX,
-      currentY
-    );
+
+    doc
+      .font("Helvetica-Oblique")
+      .fillColor("#2d3748")
+      .text(
+        `Location: ${event?.location || "Location TBA"}`,
+        leftColX,
+        currentY,
+        { underline: true }
+      );
     currentY += sectionGap;
 
     doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
@@ -246,21 +251,17 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
     doc.text("PAYMENT", rightColX, rightY);
     rightY += 24;
-    // doc
-    //   .fillColor(order?.cancelled ? "#ef4444" : "#6c757d")
-    //   .fontSize(28)
-    //   .font("Helvetica-Bold");
-    // doc.text(`$${(order?.totalAmount || 0).toFixed(2)}`, rightColX, rightY);
-    // rightY += 45;
 
     doc
       .fillColor(order?.cancelled ? "#ef4444" : "#6c757d")
       .fontSize(28)
       .font("Helvetica-Bold");
     doc.text(`$${seatPrice.toFixed(2)}`, rightColX, rightY);
+    rightY += 45;
+
     doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
     doc.text("VALIDATION", rightColX, rightY);
-    rightY += 45;
+    rightY += 30;
 
     doc.fillColor("#6c757d").fontSize(10).font("Helvetica-Bold");
     doc.text("BARCODE", rightColX, rightY);

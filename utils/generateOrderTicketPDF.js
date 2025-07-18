@@ -260,11 +260,11 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.text(`$${seatPrice.toFixed(2)}`, rightColX, rightY);
     doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
     doc.text("VALIDATION", rightColX, rightY);
-    rightY += 18;
+    rightY += 45;
 
     doc.fillColor("#6c757d").fontSize(10).font("Helvetica-Bold");
     doc.text("BARCODE", rightColX, rightY);
-    rightY += 18;
+    rightY += 30;
 
     const barcodeWidth = 150;
     const barcodeHeight = 50;

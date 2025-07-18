@@ -10,45 +10,6 @@ const bufferToDataUri = (fileFormat, buffer) => {
   return `data:application/${fileFormat};base64,${buffer.toString("base64")}`;
 };
 
-// const verifyTicket = async (req, res) => {
-//   const { orderId } = req.params;
-
-//   try {
-//     const order = await OrderModel.findById(orderId);
-
-//     if (!order) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Invalid ticket. No order found.",
-//       });
-//     }
-
-//     if (order.ticketStatus === "used") {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Ticket already used.",
-//       });
-//     }
-
-//     // First time use – mark as used
-//     order.ticketStatus = "used";
-//     await order.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Ticket is valid. Entry granted.",
-//       orderDetails: order,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Error verifying ticket.",
-//       error: error.message,
-//     });
-//   }
-// };
-
-// controllers/ticketController.js
 
 const verifyTicket = async (req, res) => {
   try {
@@ -379,23 +340,32 @@ const sendOrderEmail = async (req, res) => {
     };
     const invoiceBuffer = await generateInvoicePDF(order, event, customer);
 
-    // Build table rows for seat info
+    // Build table rows for seat info (FIXED: proper price per seat)
     const formattedSeats = order.seats
-      .map(
-        (seat, i) => `
-      <tr>
-        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
-          i + 1
-        }</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${seat.section}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${seat.row}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${
-          seat.seatNumber
-        }</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">$${seat.price}</td>
-      </tr>
-    `
-      )
+      .map((seat, i) => {
+        const price =
+          seat.price ??
+          order.ticketPrices?.[i] ??
+          order.totalAmount / order.seats.length;
+
+        return `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
+              i + 1
+            }</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${
+              seat.section
+            }</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${seat.row}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${
+              seat.seatNumber
+            }</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(
+              price
+            ).toFixed(2)}</td>
+          </tr>
+        `;
+      })
       .join("");
 
     // ========================
@@ -412,9 +382,9 @@ const sendOrderEmail = async (req, res) => {
             <p>Hello <strong>${buyer.name || "Customer"}</strong>,</p>
             <p>🎉 Thank you for booking your ticket with <strong>Events N Tickets</strong>!</p>
             <p><strong>🎤 Event:</strong> ${event.title}</p>
-            <p><strong>💵 Total Paid:</strong> <span style="color: #28a745;">$${
+            <p><strong>💵 Total Paid:</strong> <span style="color: #28a745;">$${parseFloat(
               order.totalAmount
-            }</span></p>
+            ).toFixed(2)}</span></p>
 
             <h3>🪑 Seat Details:</h3>
             <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px;">
@@ -462,7 +432,9 @@ const sendOrderEmail = async (req, res) => {
             <p><strong>Seats:</strong> ${order.seats
               .map((s) => `${s.section}-${s.row}-${s.seatNumber}`)
               .join(", ")}</p>
-            <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
+            <p><strong>Total Paid:</strong> $${parseFloat(
+              order.totalAmount
+            ).toFixed(2)}</p>
             <p>Invoice is attached for your record.</p>
           </div>
         `,
@@ -498,7 +470,9 @@ const sendOrderEmail = async (req, res) => {
             <p><strong>Organizer:</strong> ${seller?.name || "N/A"} (${
           seller?.email || "N/A"
         })</p>
-            <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
+            <p><strong>Total Paid:</strong> $${parseFloat(
+              order.totalAmount
+            ).toFixed(2)}</p>
             <p>Invoice attached.</p>
           </div>
         `,
@@ -523,8 +497,6 @@ const sendOrderEmail = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to send email." });
   }
 };
-
-export default sendOrderEmail;
 
 const uploadTicket = async (req, res) => {
   try {

@@ -393,7 +393,14 @@ export const generateInvoicePDF = async (order, event, customer) => {
     doc.text(event.title || "Event Name", leftColX + 12, currentY + 12);
 
     doc.fillColor(colors.gray).fontSize(9).font("Helvetica");
-    doc.text(`Date: ${event.date || "TBD"}`, leftColX + 12, currentY + 28);
+    // doc.text(`Date: ${event.date || "TBD"}`, leftColX + 12, currentY + 28);
+    const formattedEventDate = event?.date
+      ? DateTime.fromISO(event.date)
+          .setZone("Australia/Sydney")
+          .toFormat("dd MMMM yyyy")
+      : "TBD";
+
+    doc.text(`Date: ${formattedEventDate}`, leftColX + 12, currentY + 28);
     doc.text(
       `Location: ${event.location || "TBD"}`,
       leftColX + 12,

@@ -10,7 +10,6 @@ const bufferToDataUri = (fileFormat, buffer) => {
   return `data:application/${fileFormat};base64,${buffer.toString("base64")}`;
 };
 
-
 const verifyTicket = async (req, res) => {
   try {
     const { ticketCode } = req.body;
@@ -340,32 +339,23 @@ const sendOrderEmail = async (req, res) => {
     };
     const invoiceBuffer = await generateInvoicePDF(order, event, customer);
 
-    // Build table rows for seat info (FIXED: proper price per seat)
+    // Build table rows for seat info
     const formattedSeats = order.seats
-      .map((seat, i) => {
-        const price =
-          seat.price ??
-          order.ticketPrices?.[i] ??
-          order.totalAmount / order.seats.length;
-
-        return `
-          <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
-              i + 1
-            }</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${
-              seat.section
-            }</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${seat.row}</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${
-              seat.seatNumber
-            }</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">$${parseFloat(
-              price
-            ).toFixed(2)}</td>
-          </tr>
-        `;
-      })
+      .map(
+        (seat, i) => `
+      <tr>
+        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${
+          i + 1
+        }</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${seat.section}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${seat.row}</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">${
+          seat.seatNumber
+        }</td>
+        <td style="padding: 8px; border: 1px solid #ddd;">$${seat.price}</td>
+      </tr>
+    `
+      )
       .join("");
 
     // ========================
@@ -382,9 +372,9 @@ const sendOrderEmail = async (req, res) => {
             <p>Hello <strong>${buyer.name || "Customer"}</strong>,</p>
             <p>🎉 Thank you for booking your ticket with <strong>Events N Tickets</strong>!</p>
             <p><strong>🎤 Event:</strong> ${event.title}</p>
-            <p><strong>💵 Total Paid:</strong> <span style="color: #28a745;">$${parseFloat(
+            <p><strong>💵 Total Paid:</strong> <span style="color: #28a745;">$${
               order.totalAmount
-            ).toFixed(2)}</span></p>
+            }</span></p>
 
             <h3>🪑 Seat Details:</h3>
             <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px;">
@@ -432,9 +422,7 @@ const sendOrderEmail = async (req, res) => {
             <p><strong>Seats:</strong> ${order.seats
               .map((s) => `${s.section}-${s.row}-${s.seatNumber}`)
               .join(", ")}</p>
-            <p><strong>Total Paid:</strong> $${parseFloat(
-              order.totalAmount
-            ).toFixed(2)}</p>
+            <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
             <p>Invoice is attached for your record.</p>
           </div>
         `,
@@ -470,9 +458,7 @@ const sendOrderEmail = async (req, res) => {
             <p><strong>Organizer:</strong> ${seller?.name || "N/A"} (${
           seller?.email || "N/A"
         })</p>
-            <p><strong>Total Paid:</strong> $${parseFloat(
-              order.totalAmount
-            ).toFixed(2)}</p>
+            <p><strong>Total Paid:</strong> $${order.totalAmount}</p>
             <p>Invoice attached.</p>
           </div>
         `,

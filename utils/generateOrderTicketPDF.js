@@ -183,6 +183,12 @@ const generateOrderTicketPDF = async (order, event) => {
     const seat = order?.seats?.[0] || {};
     const row = seat?.row || "A";
     const seatNumber = seat?.seatNumber || seat?.number || "1";
+    const seatPrice =
+      order?.seats?.[0]?.price ??
+      order?.seats?.[0]?.seatPrice ??
+      event?.ticketPrice ??
+      order?.totalAmount ??
+      0;
     const seatSection = seat?.section || event?.zone || "GA";
     const seatInfo =
       seat?.section && row && seatNumber
@@ -240,13 +246,18 @@ const generateOrderTicketPDF = async (order, event) => {
     doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
     doc.text("PAYMENT", rightColX, rightY);
     rightY += 24;
+    // doc
+    //   .fillColor(order?.cancelled ? "#ef4444" : "#6c757d")
+    //   .fontSize(28)
+    //   .font("Helvetica-Bold");
+    // doc.text(`$${(order?.totalAmount || 0).toFixed(2)}`, rightColX, rightY);
+    // rightY += 45;
+
     doc
       .fillColor(order?.cancelled ? "#ef4444" : "#6c757d")
       .fontSize(28)
       .font("Helvetica-Bold");
-    doc.text(`$${(order?.totalAmount || 0).toFixed(2)}`, rightColX, rightY);
-    rightY += 45;
-
+    doc.text(`$${seatPrice.toFixed(2)}`, rightColX, rightY);
     doc.fillColor("#e05829").fontSize(14).font("Helvetica-Bold");
     doc.text("VALIDATION", rightColX, rightY);
     rightY += 18;

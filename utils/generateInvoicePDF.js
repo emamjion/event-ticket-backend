@@ -212,6 +212,7 @@
 // };
 
 import fs from "fs";
+import { DateTime } from "luxon";
 import path from "path";
 import PDFDocument from "pdfkit";
 
@@ -221,12 +222,16 @@ const generateSerialNumber = () => {
   return `${dateStr}-${randomNum}`;
 };
 
+// const generateCurrentDate = () => {
+//   const now = new Date();
+//   const day = String(now.getDate()).padStart(2, "0");
+//   const month = String(now.getMonth() + 1).padStart(2, "0");
+//   const year = now.getFullYear();
+//   return `${day}/${month}/${year}`;
+// };
+
 const generateCurrentDate = () => {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = now.getFullYear();
-  return `${day}/${month}/${year}`;
+  return DateTime.now().setZone("Australia/Sydney").toFormat("dd/MM/yyyy");
 };
 
 export const generateInvoicePDF = async (order, event, customer) => {
@@ -307,6 +312,11 @@ export const generateInvoicePDF = async (order, event, customer) => {
       titleX,
       titleY + 25
     );
+    // doc.text(
+    //   `Date: ${order.date || generateCurrentDate()}`,
+    //   titleX,
+    //   titleY + 38
+    // );
     doc.text(
       `Date: ${order.date || generateCurrentDate()}`,
       titleX,

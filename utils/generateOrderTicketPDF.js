@@ -527,10 +527,12 @@ const generateOrderTicketPDF = async (order, event) => {
     currentY += 16;
 
     if (locationLine2) {
+      // Align second line with the beginning of the actual location (not under "Location:")
+      const locationLabelWidth = doc.widthOfString("Location: ");
       doc
         .font("Helvetica-Oblique")
         .fillColor("#2d3748")
-        .text(locationLine2, leftColX + 60, currentY);
+        .text(locationLine2, leftColX + locationLabelWidth, currentY);
       currentY += 16;
     }
 

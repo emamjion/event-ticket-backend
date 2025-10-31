@@ -10,10 +10,8 @@ import {
   getRecentScans,
   getTodayStats,
 } from "../controllers/scanLog.controller.js";
-import {
-  getScannedTicketsByModerator,
-  scanTicket,
-} from "../controllers/scanTicket.controller.js";
+import { getScannedTicketsByModerator } from "../controllers/scanTicket.controller.js";
+import { scanTicket } from "../controllers/ticketScanRecord.controller.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifyModerator from "../middleware/verifyModerator.js";
 import verifyToken from "../middleware/verifyToken.js";
@@ -48,6 +46,9 @@ moderatorRouter.get(
   getEventModerators
 );
 
+// moderatorRouter.post("/scan-ticket", verifyToken, verifyModerator, scanTicket);
+
+// temporary scan tracking system
 moderatorRouter.post("/scan-ticket", verifyToken, verifyModerator, scanTicket);
 
 moderatorRouter.get(

@@ -20,9 +20,25 @@ const ticketSchema = new mongoose.Schema({
   },
 
   pdfUrl: {
-  type: String,
-  required: true,
-},
+    type: String,
+    required: true,
+  },
+  scannedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+
+  scannedAt: {
+    type: Date,
+    default: null,
+  },
+
+  scanStatus: {
+    type: String,
+    enum: ["not_scanned", "valid", "used", "invalid"],
+    default: "not_scanned",
+  },
 
   createdAt: {
     type: Date,

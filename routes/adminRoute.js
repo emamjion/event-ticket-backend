@@ -3,16 +3,21 @@ import {
   addNewUserByAdmin,
   approveSellerRequest,
   blockUserById,
+  createModerator,
+  deleteModerator,
   deleteUser,
   denySellerRequest,
   getAllBookings,
   getAllEventsForAdmin,
+  getAllModerators,
   getAllSoldTickets,
   getAllTransactions,
   getAllUsers,
   getPendingSellerRequests,
+  getSingleModerator,
   monitorSellerActivity,
   unblockUserById,
+  updateModerator,
   updateUserRole,
   verifySellerPaymentInfo,
 } from "../controllers/adminController.js";
@@ -109,5 +114,29 @@ adminRouter.get(
 
 // get all bookings
 adminRouter.get("/all-bookings", verifyToken, verifyAdmin, getAllBookings);
+
+
+// Only admin can create moderator
+adminRouter.post(
+  "/create-moderator",
+  verifyToken,
+  verifyAdmin,
+  createModerator
+);
+
+adminRouter.get("/moderators", verifyToken, verifyAdmin, getAllModerators);
+adminRouter.get(
+  "/moderators/:id",
+  verifyToken,
+  verifyAdmin,
+  getSingleModerator
+);
+adminRouter.put("/moderators/:id", verifyToken, verifyAdmin, updateModerator);
+adminRouter.delete(
+  "/moderators/:id",
+  verifyToken,
+  verifyAdmin,
+  deleteModerator
+);
 
 export default adminRouter;

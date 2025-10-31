@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpire: Date,
     role: {
       type: String,
-      enum: ["admin", "seller", "user", "buyer"],
+      enum: ["admin", "seller", "user", "buyer", "moderator"],
       default: "buyer",
     },
     isBlocked: {

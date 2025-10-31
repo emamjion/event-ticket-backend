@@ -18,7 +18,10 @@ const getSellerEarnings = async (req, res) => {
     const sellerId = seller._id;
 
     // Get all orders of this seller
-    const orders = await OrderModel.find({ sellerId });
+    const orders = await OrderModel.find({ sellerId })
+      .populate("buyerId", "name email contactNumber")
+      .populate("sellerId", "name email contactNumber organizationName")
+      .populate("eventId", "title date");
 
     let totalEarnings = 0;
     let totalTicketsSold = 0;

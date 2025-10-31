@@ -8,10 +8,16 @@ const sellerSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    shopName: {
+
+    name: {
       type: String,
+      required: true,
       trim: true,
-      required: false,
+    },
+    organizationName: {
+      type: String,
+      required: true,
+      trim: true,
     },
     email: {
       type: String,

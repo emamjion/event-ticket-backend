@@ -608,6 +608,156 @@ const getAllBookings = async (req, res) => {
   }
 };
 
+
+// function to create moderator
+const createModerator = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const moderator = new UserModel({
+      name,
+      email,
+      password: hashedPassword,
+      profileImg: null,
+      role: "moderator",
+    });
+
+    await moderator.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Moderator created successfully",
+      moderator,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
+
+const getAllModerators = async (req, res) => {
+  try {
+    const moderators = await UserModel.find({ role: "moderator" }).select(
+      "name email contactNumber address profileImg createdAt"
+    );
+
+    if (!moderators || moderators.length === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No moderators found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Moderators fetched successfully",
+      total: moderators.length,
+      moderators,
+    });
+  } catch (error) {
+    console.error("Error fetching moderators:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching moderators",
+      error: error.message,
+    });
+  }
+};
+
+const getSingleModerator = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const moderator = await UserModel.findOne({
+      _id: id,
+      role: "moderator",
+    }).select("name email contactNumber address profileImg createdAt");
+
+    if (!moderator) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Moderator not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      success: "Moderator Details fetched successfully",
+      moderator,
+    });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+const deleteModerator = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const moderator = await UserModel.findOneAndDelete({
+      _id: id,
+      role: "moderator",
+    });
+
+    if (!moderator) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Moderator not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Moderator deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
+
+const updateModerator = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let updateData = { ...req.body };
+
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(updateData.password, 10);
+    }
+
+    const moderator = await UserModel.findOneAndUpdate(
+      { _id: id, role: "moderator" },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!moderator) {
+      return res.status(404).json({
+        success: false,
+        message: "Moderator not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Moderator updated successfully",
+      moderator,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
 export {
   addNewUserByAdmin,
   approveSellerRequest,
@@ -625,4 +775,9 @@ export {
   unblockUserById,
   updateUserRole,
   verifySellerPaymentInfo,
+  createModerator,
+  getAllModerators,
+  getSingleModerator,
+  updateModerator,
+  deleteModerator
 };
